@@ -1,23 +1,24 @@
 
 import requests
 
-url = "https://datamall2.mytransport.sg/ltaodataservice/BusRoutes?$skip=8500"
+def routeGet():
 
-payload = {}
-headers = {
-  'AccountKey': 'nGsExLUQTqOhMSxoCHam8g=='
-}
+    url = "https://datamall2.mytransport.sg/ltaodataservice/BusRoutes?$skip=8500"
 
-response = requests.request("GET", url, headers=headers, data=payload)
+    payload = {}
+    headers = {
+    'AccountKey': 'nGsExLUQTqOhMSxoCHam8g=='
+    }
 
-data = response.json()['value']
+    response = requests.request("GET", url, headers=headers, data=payload)
 
-print(type(response.text))
+    data = response.json()['value']
 
-route_190 = [r for r in data if r["ServiceNo"] == "190" and r['Direction'] == 2]
+    # print(type(response.text))
 
-route_190.sort(key=lambda r: (r["StopSequence"]))
+    route_190 = [r for r in data if r["ServiceNo"] == "190" and r['Direction'] == 2]
 
+    route_190.sort(key=lambda r: (r["StopSequence"]))
 
-print(route_190)
+    return route_190
 
