@@ -20,5 +20,8 @@ def routeGet():
 
     route_190.sort(key=lambda r: (r["StopSequence"]))
 
+    for i in range(len(route_190)):
+        route_190[i]['StopSequence'] = i
+
     return route_190
 
