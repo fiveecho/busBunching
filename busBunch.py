@@ -6,9 +6,7 @@ from matplotlib.animation import FuncAnimation
 route = routeGet()
 
 # print(route)
-seed = 190
 
-rng = np.random.default_rng(seed)
 
 distance = [stop['Distance'] for stop in route]
 
@@ -88,8 +86,8 @@ for i in range(1000):
     bus_no = 0
     bus_tracker = []
     bunch = False
-    snapshots = []
-    TIMEOUT = 7260
+    # snapshots = []
+    TIMEOUT = 10800
 
 
     while not bunch:
@@ -125,10 +123,10 @@ for i in range(1000):
                     print(f'Bus bunching occurred; bus {bus_tracker[i].index} and bus {bus_tracker[i+1].index} after {time/60} min')
                     bunch = True
 
-        snapshots.append({
-            bus.index: bus.position
-            for bus in bus_tracker if not bus.terminal
-        })
+        # snapshots.append({
+        #     bus.index: bus.position
+        #     for bus in bus_tracker if not bus.terminal
+        # })
         
         time += 1
 
