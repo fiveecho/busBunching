@@ -2,6 +2,7 @@ from routePull import routeGet
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
+from scipy.stats import truncnorm
 
 route = routeGet()
 
@@ -17,18 +18,29 @@ AVERAGE_BOARD_TIME = 1.52 # https://www.sciencedirect.com/science/article/pii/S1
 FIXED_BUS_STOP_DELAY = 5.6 + 10
 BEFORE_EXPRESSWAY_INDEX = 20
 AVERAGE_PASSENGER_RATE = 10/(5.0*60)
-EXPRESSWAY_SPEED = 55.0/(60*60)
-ARTERIAL_SPEED = 29.0 /(60*60)
+EXPRESSWAY_SPEED = 50.0
+ARTERIAL_SPEED = 29.0
 # CRUISE_SPEED = (distance[-1])/(ROUTE_DURATION * 60)
 H = 5.0 * 60 # 5 min headway, based on 190 bus service weekday 5-7pm headway
 # print(CRUISE_SPEED)
+
+def get_speed(expressway = False):
+    if expressway:
+        mean, std, low, high = EXPRESSWAY_SPEED, 2, 25, 60
+    else:
+        mean, std, low, high = ARTERIAL_SPEED, 5, 15, 40
+    # Convert absolute bounds to standard deviations for SciPy
+    a = (low - mean) / std
+    b = (high - mean) / std
+    
+    return truncnorm.rvs(a, b, loc=mean, scale=std)/(60*60)
 
 class Bus:
     def __init__(self, index):
         self.position = 0
         self.index = index
         self.last_stop = 0
-        self.speed = ARTERIAL_SPEED
+        self.speed = get_speed()
         self.dwell_end = -1
         self.terminal = False
     def move(self):
@@ -63,9 +75,9 @@ class BusStop:
 
     def driving_speed(self):
         if self.index == BEFORE_EXPRESSWAY_INDEX:
-            speed = EXPRESSWAY_SPEED
+            speed = get_speed(expressway=True)
         else:
-            speed = ARTERIAL_SPEED
+            speed = get_speed()
 
         return speed
 
@@ -88,13 +100,12 @@ bus_tracker = []
 bunch = False
 snapshots = []
 TIMEOUT = 10800
+bunched_buses = set()
 
+route_time = []
 
-while not bunch:
     # bus dispatch
-    if time > TIMEOUT:
-        print('Timeout, no bunching occurred')
-        break
+while time <= TIMEOUT:
     if time % H == 0 and time <= 7200:
         bus_tracker.append(Bus(bus_no))
         bus_no += 1
@@ -110,6 +121,8 @@ while not bunch:
         if bus.position == busStops[bus.last_stop + 1].distance:
             if bus.position == busStops[-1].distance:
                 bus.terminal = True
+                if bus.index == 0:
+                    print(f'\nroute time: {time}\n')
             else:
                 bus.last_stop += 1
                 bus.dwell_end = time + busStops[bus.last_stop].dwell_time(time)
@@ -120,9 +133,10 @@ while not bunch:
     if len(bus_tracker) >= 2:
         for i in range(len(bus_tracker) - 1):
             if (bus_tracker[i + 1].position >= bus_tracker[i].position) and not bus_tracker[i + 1].terminal and not bus_tracker[i].terminal:
-                print(f'Bus bunching occurred; bus {bus_tracker[i].index} and bus {bus_tracker[i+1].index} after {time/60} min')
+                # print(f'Bus bunching occurred; bus {bus_tracker[i].index} and bus {bus_tracker[i+1].index} after {time/60} min')
                 bunch = True
-                bunched_buses = {bus_tracker[i].index, bus_tracker[i+1].index}
+                bunched_buses.add(bus_tracker[i].index) 
+                bunched_buses.add(bus_tracker[i+1].index)
 
     snapshots.append({
         bus.index: bus.position
@@ -131,7 +145,7 @@ while not bunch:
     
     time += 1
 
-        
+print(f'percentage of buses bunched: {round((len(bunched_buses)/len(bus_tracker))*100, 3)}')        
 
 if bunch:
     # Animation
@@ -195,7 +209,7 @@ if bunch:
 
     STEP = 15
 
-    frame_ids = list(range(0, len(snapshots), STEP)) + [len(snapshots) - 1] * 60 
+    frame_ids = list(range(0, len(snapshots), STEP)) + [len(snapshots) - 1] 
 
     ani = FuncAnimation(
         fig,
@@ -206,6 +220,6 @@ if bunch:
         repeat=False
     )
 
-    ani.save(filename="tmp/bus_bunch_no_control.gif", writer="pillow", fps=15)
+    # ani.save(filename="tmp/bus_bunch_no_control.gif", writer="pillow", fps=15)
 
     plt.show()
