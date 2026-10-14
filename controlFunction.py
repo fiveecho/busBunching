@@ -1,4 +1,4 @@
-from busBunch import Bus, BusStop
+from helpers import Bus, BusStop
 import numpy as np
 
 reference_window = np.array([-1,0,1])

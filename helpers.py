@@ -14,14 +14,14 @@ AVERAGE_BOARD_TIME = 1.52 # https://www.sciencedirect.com/science/article/pii/S1
 FIXED_BUS_STOP_DELAY = 5.6 + 10
 BEFORE_EXPRESSWAY_INDEX = 20
 AVERAGE_PASSENGER_RATE = 10/(5.0*60)
-EXPRESSWAY_SPEED = 50.0
-ARTERIAL_SPEED = 29.0 
+EXPRESSWAY_SPEED = 43.0 # from scheduled bus timings https://sgwiki.miraheze.org/wiki/Bus_Service_190
+ARTERIAL_SPEED = 24.5 
 # CRUISE_SPEED = (distance[-1])/(ROUTE_DURATION * 60)
 H = 5.0 * 60 # 5 min headway, based on 190 bus service weekday 5-7pm headway
 
 def get_speed(expressway = False):
     if expressway:
-        mean, std, low, high = EXPRESSWAY_SPEED, 2, 25, 60
+        mean, std, low, high = EXPRESSWAY_SPEED, 3, 25, 60
     else:
         mean, std, low, high = ARTERIAL_SPEED, 5, 15, 45
     # Convert absolute bounds to standard deviations for SciPy

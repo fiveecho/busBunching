@@ -8,7 +8,7 @@ def routeGet():
 
     payload = {}
     headers = {
-    'AccountKey': os.environ["LTA_ACCOUNT_KEY"]  # export LTA_ACCOUNT_KEY=... before running
+    'AccountKey': os.environ["LTA_ACCOUNT_KEY"]  
     }
 
     response = requests.request("GET", url, headers=headers, data=payload)
