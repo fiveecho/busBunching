@@ -1,4 +1,4 @@
-from routePull import routeGet
+from routePull import routeGet # LTA DataMall API call to retrive route info for bus 190
 import numpy as np
 from scipy.stats import truncnorm
 

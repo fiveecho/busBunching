@@ -1,4 +1,3 @@
-from routePull import routeGet
 import numpy as np
 from scipy.stats import truncnorm
 from params import Bus, BusStop, distance, H

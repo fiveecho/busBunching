@@ -1,17 +1,9 @@
-from routePull import routeGet
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from params import Bus, BusStop, distance, H
 
-# route = routeGet()
 
-# print(route)
-
-
-# distance = [stop['Distance'] for stop in route]
-
-# print(distance)
 
 bunch_counter = 0
 
