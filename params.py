@@ -1,11 +1,11 @@
-from routePull import routeGet # LTA DataMall API call to retrive route info for bus 190
+import json
+from pathlib import Path
 import numpy as np
 from scipy.stats import truncnorm
 
-route = routeGet()
-
-# print(route)
-
+# Cached LTA DataMall route for bus 190, direction 2; refresh with `python routePull.py`
+with open(Path(__file__).parent / "data" / "route_190_dir2.json") as f:
+    route = json.load(f)
 
 distance = [stop['Distance'] for stop in route]
 
@@ -66,7 +66,7 @@ class BusStop:
 
         self.last_bus_time = current_time + dwell
 
-        return int(dwell)
+        return dwell
 
     def driving_speed(self):
         if self.index == BEFORE_EXPRESSWAY_INDEX:
