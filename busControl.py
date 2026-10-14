@@ -1,6 +1,6 @@
 from routePull import routeGet
 import numpy as np
-from busBunch import Bus, BusStop
+from params import Bus, BusStop
 
 route = routeGet()
 
