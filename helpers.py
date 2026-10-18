@@ -38,6 +38,7 @@ class Bus:
         self.speed = get_speed()
         self.dwell_end = -1
         self.terminal = False
+        self.arrival_times = []
     def move(self):
         if self.terminal == False:
             self.position += self.speed
@@ -75,3 +76,15 @@ class BusStop:
             speed = get_speed()
 
         return speed
+
+
+def headway_stats(arrival_times, H = H):
+    """EWT (s) and headway CV at every stop, from simulate_run's arrival_times.
+    Returns two arrays of length 31 (index = stop). Leaves out the first and last bus."""
+
+    A = np.array(arrival_times[1:-1], dtype=float)   # (n_buses - 2, 31): row = bus, column = stop
+    h = np.diff(np.sort(A, axis=0), axis=0)           # headways at each stop, in arrival order
+    awt = (h**2).sum(axis=0) / (2 * h.sum(axis=0)) # probability passenger shows up in interval h * average waiting time per interval h/2
+    ewt = awt - H / 2
+    cv = h.std(axis=0, ddof=1) / h.mean(axis=0)
+    return ewt, cv

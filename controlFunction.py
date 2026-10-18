@@ -9,7 +9,9 @@ def control(bus, tracker, ): # bus, array of tracked buses
     else:
         current_bus_index = bus.index
         relevant_buses = {b.index: (b.position, b.last_stop) for b in tracker if ((not b.terminal) and (b.index in (reference_window + current_bus_index)))}
-        
+        # no. bus stops in between * average delay added to x_(n-1) - x_n
+
+        error = relevant_buses[current_bus_index][0]
 
 
     # cases --> no leading no following, 
