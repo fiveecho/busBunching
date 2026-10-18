@@ -16,14 +16,20 @@ BEFORE_EXPRESSWAY_INDEX = 20
 AVERAGE_PASSENGER_RATE = 10/(5.0*60)
 EXPRESSWAY_SPEED = 43.0 # from scheduled bus timings https://sgwiki.miraheze.org/wiki/Bus_Service_190
 ARTERIAL_SPEED = 24.5 
+
 # CRUISE_SPEED = (distance[-1])/(ROUTE_DURATION * 60)
 H = 5.0 * 60 # 5 min headway, based on 190 bus service weekday 5-7pm headway
 
-def get_speed(expressway = False):
+def get_speed(expressway = False, traffic_factor = 0):
+    if traffic_factor == 0:
+        return (EXPRESSWAY_SPEED if expressway else ARTERIAL_SPEED)/3600
+    
     if expressway:
-        mean, std, low, high = EXPRESSWAY_SPEED, 3, 25, 60
+        mean, std = EXPRESSWAY_SPEED, traffic_factor * 3
+        low, high = max(mean - 3 * std, 3), min(mean + 3 * std, 60)
     else:
-        mean, std, low, high = ARTERIAL_SPEED, 5, 15, 45
+        mean, std = ARTERIAL_SPEED, traffic_factor * 5
+        low, high = max(mean - 3 * std, 5), min(mean + 3 * std, 50)
     # Convert absolute bounds to standard deviations for SciPy
     a = (low - mean) / std
     b = (high - mean) / std
@@ -35,7 +41,7 @@ class Bus:
         self.position = 0
         self.index = index
         self.last_stop = 0
-        self.speed = get_speed()
+        self.speed = 0
         self.dwell_end = -1
         self.terminal = False
         self.arrival_times = []
@@ -47,10 +53,11 @@ class Bus:
         
 
 class BusStop:
-    def __init__(self, distance, index):
+    def __init__(self, distance, index, traffic_factor):
         self.last_bus_time = None
         self.distance = distance
         self.index = index
+        self.traffic_factor = traffic_factor
 
     def dwell_time(self, current_time):
 
@@ -71,9 +78,9 @@ class BusStop:
 
     def driving_speed(self):
         if self.index == BEFORE_EXPRESSWAY_INDEX:
-            speed = get_speed(expressway=True)
+            speed = get_speed(expressway=True, traffic_factor=self.traffic_factor)
         else:
-            speed = get_speed()
+            speed = get_speed(traffic_factor=self.traffic_factor)
 
         return speed
 

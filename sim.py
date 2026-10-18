@@ -4,7 +4,7 @@ DISPATCH_END = 7200  # last dispatch at t <= 2 h (17:00-19:00 peak)
 TIMEOUT = 12600  # safety cap only; runs normally end when every bus is terminal
 
 
-def simulate_run(record=False, controller = None):
+def simulate_run(record=False, controller = None, traffic_factor = 1.0):
     """One peak-window run.
 
     Returns a dict with
@@ -15,7 +15,7 @@ def simulate_run(record=False, controller = None):
         trip_times: {bus index: terminal arrival time - dispatch time} (s), for buses that finished
         snapshots:  list (one per tick) of {bus index: position (km)} for active buses if record, else None
     """
-    busStops = [BusStop(distance[j], j) for j in range(len(distance))]
+    busStops = [BusStop(distance[j], j, traffic_factor) for j in range(len(distance))]
     time = 0
     bus_tracker = []
     bunched_buses = set()
@@ -26,6 +26,7 @@ def simulate_run(record=False, controller = None):
         # bus dispatch
         if time % H == 0 and time <= DISPATCH_END:
             bus = Bus(len(bus_tracker))
+            bus.speed = busStops[0].driving_speed()
             bus_tracker.append(bus)
             bus.arrival_times.append(time)
 
