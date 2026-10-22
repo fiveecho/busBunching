@@ -19,6 +19,8 @@ ARTERIAL_SPEED = 24.5
 
 # CRUISE_SPEED = (distance[-1])/(ROUTE_DURATION * 60)
 H = 5.0 * 60 # 5 min headway, based on 190 bus service weekday 5-7pm headway
+# model mean dwell: a bus waits about H - d since the previous departure, so d = 15.6 + 1.52 (H - d)/30 gives 29.3 s
+MEAN_DWELL = (FIXED_BUS_STOP_DELAY + AVERAGE_BOARD_TIME * AVERAGE_PASSENGER_RATE * H) / (1 + AVERAGE_BOARD_TIME * AVERAGE_PASSENGER_RATE)
 
 def get_speed(expressway = False, traffic_factor = 0):
     if traffic_factor == 0:
@@ -59,7 +61,11 @@ class BusStop:
         self.index = index
         self.traffic_factor = traffic_factor
 
-    def dwell_time(self, current_time):
+    def dwell_time(self, current_time, passenger_noise):
+
+        if not passenger_noise:
+            # boarding feedback off: every bus dwells for the model's mean, whatever its headway
+            return MEAN_DWELL
 
         if self.last_bus_time == None:
             wait_time = H

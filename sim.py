@@ -1,11 +1,11 @@
-from helpers import Bus, BusStop, distance, H
+from helpers import Bus, BusStop, distance, H, AVERAGE_PASSENGER_RATE
 import math
 
 DISPATCH_END = 7200  # last dispatch at t <= 2 h (17:00-19:00 peak)
 TIMEOUT = 12600  # safety cap only; runs normally end when every bus is terminal
 
 
-def simulate_run(record=False, controller = None, traffic_factor = 1.0, control_period = 10):
+def simulate_run(record=False, controller = None, traffic_factor = 1.0, control_period = 10, passenger_noise = True):
     """One peak-window run.
 
     Returns a dict with
@@ -50,7 +50,7 @@ def simulate_run(record=False, controller = None, traffic_factor = 1.0, control_
                     bus.terminal = True
                 else:
                     bus.last_stop += 1
-                    bus.dwell_end = time + busStops[bus.last_stop].dwell_time(time)
+                    bus.dwell_end = time + busStops[bus.last_stop].dwell_time(time, passenger_noise)
                     bus.base_speed = busStops[bus.last_stop].driving_speed()
                     bus.speed = bus.base_speed
 

@@ -1,11 +1,10 @@
 import numpy as np
-from helpers import distance, H, ARTERIAL_SPEED, EXPRESSWAY_SPEED, BEFORE_EXPRESSWAY_INDEX
+from helpers import distance, H, ARTERIAL_SPEED, EXPRESSWAY_SPEED, BEFORE_EXPRESSWAY_INDEX, MEAN_DWELL
 
 # Equivalent-arterial coordinate: the route stretched so it runs at ARTERIAL_SPEED throughout.
 # The expressway leg is shrunk by ARTERIAL/EXPRESSWAY, and each intermediate stop adds the
 # distance an arterial bus would cover during an average dwell. A spacing in this coordinate
 # divided by ARTERIAL_SPEED is a nominal time headway.
-MEAN_DWELL = 29.3                                   # s, model mean dwell (see CLAUDE.md)
 V_ART = ARTERIAL_SPEED / 3600                       # km/s
 DWELL_EQ = MEAN_DWELL * V_ART                       # km of arterial road per average dwell
 

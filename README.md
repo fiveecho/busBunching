@@ -2,13 +2,15 @@
 
 A simulation of bus bunching on SMRT service 190 (Kampong Bahru Terminal to Choa Chu Kang Interchange), built from real LTA stop-distance data and calibrated to the published timetable. The goal is to test a cooperative speed-control law (Daganzo and Pilachowski, 2011) under the constraints a Singapore operator actually faces. The main constraint is that buses can be slowed but not sped up.
 
-**Status:** the uncontrolled baseline is complete. The controller is in progress.
+**Status:** the uncontrolled baseline and a first controller are complete. The headroom trade-off, a discrete driver display and driver lag are in progress.
 
 <img width="2400" height="800" alt="Animation of 190 buses along the route, with bunched buses in red" src="https://github.com/user-attachments/assets/81368f2a-8a7e-4990-985b-4adb60d7a8e3" />
 
 ## Headline so far
 
-Without control, bunching appears even with no traffic noise at all. Uneven passenger boarding alone bunches about 11% of buses over a two-hour evening peak. At the baseline traffic noise this rises to 65%. Excess wait time grows steadily along the route, reaching about 2 minutes by the last boarding stop.
+Without control, bunching appears even with no traffic noise at all. Uneven passenger boarding alone bunches about 11% of buses over a two-hour evening peak. At the baseline traffic noise this rises to 65%, and excess wait time (EWT) reaches about 2 minutes by the last boarding stop.
+
+A slow-only version of Daganzo and Pilachowski's cooperative speed control, which never asks a bus to go faster than traffic allows, cuts bunching from 65% to under 1% and EWT at the last boarding stop from 131 s to 11 s. It costs about 2.5 minutes of trip time.
 
 ## Model
 
@@ -48,7 +50,9 @@ The last 0.8 km to the interchange takes 5–7 min in the timetable, against abo
 
   AWT = Σh² / (2Σh),  SWT = H/2,  EWT = AWT − SWT.
 
-  EWT is the extra time an average passenger, arriving at random, waits because buses are uneven. It is quadratic in headway, because long gaps both catch more passengers and make each of them wait longer. The **route average** over stops 1–29 equals the per-passenger average, because demand is uniform across stops. The first and last bus are left out.
+  EWT is the extra time an average passenger, arriving at random, waits because buses are uneven. It is quadratic in headway, because long gaps both catch more passengers and make each of them wait longer. The first and last bus are left out.
+
+  EWT grows along the route, so an average over all stops would hide where the problem is. It is reported at two stops: **stop 20**, the last stop before the expressway, and **stop 29**, the last boarding stop. The terminal is not used: it is alight-only, so its headways match no passenger's wait.
 - **Trip time:** dispatch to terminal, averaged within each run. When control is added, this becomes the cost of control.
 
 All results are means over independent runs with 95% confidence intervals (1.96 × sd / √runs). Each run counts as one sample, since buses within a run are not independent.
@@ -57,29 +61,80 @@ All results are means over independent runs with 95% confidence intervals (1.96 
 
 ![Noise sweep](traffic_noise_sweep.png)
 
-The figure uses 100 runs per level. The table below uses 200 runs per level:
+The figure uses 100 runs per level and shows the model (blue) alongside a version with the boarding feedback switched off (orange; explained below). The table below uses 200 runs per level, for the model:
 
-| Traffic factor (arterial sd) | % bunched | EWT, route average | EWT stop 10 | EWT stop 20 | EWT stop 29 | Trip time |
-|---|---|---|---|---|---|---|
-| 0 (boarding noise only) | 10.8 ± 1.3 | 9 ± 1 s | 1 s | 9 s | 40 s | 59.2 min |
-| 0.6 (3 km/h) | 48.6 ± 2.1 | 32 ± 1 s | 8 s | 42 s | 97 s | 59.7 min |
-| 1.0 (5 km/h, baseline) | 65.2 ± 1.7 | 53 ± 2 s | 23 s | 77 s | 128 s | 60.8 min |
-| 1.4 (7 km/h) | 76.6 ± 1.3 | 75 ± 2 s | 49 s | 107 s | 152 s | 62.7 min |
+| Traffic factor (arterial sd) | % bunched | EWT stop 20 | EWT stop 29 | Trip time |
+|---|---|---|---|---|
+| 0 (boarding noise only) | 10.8 ± 1.3 | 9 ± 1 s | 40 ± 2 s | 59.2 min |
+| 0.6 (3 km/h) | 48.6 ± 2.1 | 42 ± 2 s | 97 ± 3 s | 59.7 min |
+| 1.0 (5 km/h, baseline) | 65.2 ± 1.7 | 77 ± 3 s | 128 ± 3 s | 60.8 min |
+| 1.4 (7 km/h) | 76.6 ± 1.3 | 107 ± 3 s | 152 ± 5 s | 62.7 min |
 
 - **Bunching is not only a traffic problem.** With traffic noise switched off, the boarding feedback alone still bunches about 11% of buses. This is the instability that the first term of Daganzo and Pilachowski's control law is designed to cancel.
-- **Headway errors amplify along the route.** At baseline, EWT grows from about 23 s at stop 10 to about 2 min at stop 29. The route average (53 s) hides this: passengers late on the route bear most of the cost.
+- **Headway errors amplify along the route.** At baseline, EWT grows from about 23 s at stop 10 to 77 s at stop 20 and about 2 min at stop 29. Passengers late on the route bear most of the cost.
 - **The baseline sits on the steep part of the curve,** so the controller will be tested at several noise levels rather than at the baseline alone.
 
-## Control (in progress)
+### Why buses bunch: a disturbance and an amplifier
 
-The planned controller is based on Daganzo and Pilachowski (2011). Each bus adjusts its speed using the gaps to the bus in front and the bus behind, as if neighbouring buses were joined by springs. This project's version adds the realities of operating it:
+Two mechanisms drive bunching here. Each can be switched off separately:
 
-- slow-only control, capped at the cruise speed, because operators slow buses rather than speed them up;
-- headroom δ below the cruise speed;
-- driver response lag and an acceleration limit;
-- free boundaries at the first and last bus.
+- **Traffic noise:** random leg speeds.
+- **Boarding feedback:** a late bus finds more passengers waiting, dwells longer and falls further behind. Switching it off gives every bus the model's average dwell (29.3 s), whatever its headway.
 
-The paper's linear analysis only holds while the speed command stays within its limits. The open question this project addresses is how much is lost once the command is clipped.
+![EWT along the route](feedback_profile.png)
+
+200 runs each, baseline traffic noise where on:
+
+| Case | % bunched | EWT stop 20 | EWT stop 29 |
+|---|---|---|---|
+| Traffic noise + boarding feedback (model) | 66.2 ± 1.7 | 78.5 s | 130.8 s |
+| Traffic noise only | 9.4 ± 1.1 | 18.9 s | 32.4 s |
+| Boarding feedback only | 11.3 ± 1.5 | 9.5 s | 40.3 s |
+| Neither | 0.0 | 0 s | 0 s |
+
+- **Traffic noise alone makes headway errors accumulate like a random walk.** EWT rises roughly linearly along the route, with a jump across the long expressway leg, but nothing amplifies the errors.
+- **Boarding feedback alone amplifies even the small randomness in boarding numbers.** EWT starts near zero and accelerates along the route.
+- **Together they are far worse than the sum:** 131 s at the last boarding stop, against 32 + 40 s. In control terms, the boarding feedback is an unstable plant and traffic noise is the disturbance it amplifies. This is why the controller needs a real restoring force, not just smoothing.
+- With feedback on, EWT dips slightly across the expressway, where there is no boarding and nearby buses draw independent speeds. This has not been investigated further.
+
+## Control
+
+The controller is based on Daganzo and Pilachowski (2011). Each bus adjusts its speed using the gaps to the bus in front and the bus behind, as if neighbouring buses were joined by springs.
+
+**Measuring the gaps.** The route has two speeds, 24.5 km/h arterial and 43 km/h on the expressway, so a distance gap does not translate directly into a time gap. The route is therefore mapped onto an *equivalent arterial* coordinate: the expressway leg is shrunk by 24.5/43, and each stop adds the distance an arterial bus covers during an average 29.3 s dwell. A gap in this coordinate divided by 24.5 km/h is a nominal time headway. This is a model-based estimate: it assumes nominal speeds and average dwells, not each bus's actual ones.
+
+**The law.** Each bus gets a speed fraction r, which multiplies its drawn leg speed:
+
+  r = 1 − δ + (e_front − e_rear) / T_c
+
+Here e_front and e_rear are the front and rear headway errors (nominal headway − H), T_c sets the gain (α = 1/T_c), and δ is optional headroom. A bus with no neighbour, the first or the newest, treats the missing one as sitting at exactly the ideal headway. The target is refreshed every 10 s, as an in-cab display would be. Two configurations:
+
+- **No limits:** any r. This checks the theory, not a realistic design.
+- **Slow-only:** r is capped at 1, so a bus is never asked to go faster than traffic allows, with a floor of 0.5.
+
+**Stability.** Two limits bound the gain. The 10 s refresh delays the feedback, which would cause oscillation for T_c below about 25 s. More interesting is a lower limit on the gain. This version leaves out the paper's term that cancels the boarding feedback, so the spring has to beat that instability on its own. Diagonalising the linearised chain gives every mode a growth rate proportional to (q·b·v̄ − 2α), where q is the passenger arrival rate per km, b the boarding time and v̄ the cruise speed. The spring therefore wins only if α > q·b·v̄ / 2, which here means T_c below about 74 min. Over a single trip of about an hour the transition is gradual: just past the limit, errors grow far more slowly than without control. In the sweep below, performance worsens smoothly as T_c approaches it.
+
+![Gain sweep](tc_sweep.png)
+
+200 runs each, baseline traffic noise:
+
+| Configuration | % bunched | EWT stop 20 | EWT stop 29 | Trip time |
+|---|---|---|---|---|
+| No control | 65.4 ± 1.7 | 77 ± 3 s | 131 ± 4 s | 60.8 min |
+| No limits, T_c = 10 min | 0.0 | 3 s | 3 s | 60.8 min |
+| Slow-only, T_c = 10 min | 0.9 ± 0.4 | 11 ± 1 s | 11 ± 1 s | 63.3 min |
+| Slow-only, T_c = 60 min | 36.5 ± 1.7 | 50 ± 2 s | 64 ± 2 s | 61.9 min |
+| Slow-only, T_c = 30 s | 0.0 | 8 s | 10 s | 69.5 min |
+
+- **Slow-only control works with a strong enough gain.** At T_c = 10 min it removes nearly all bunching. It costs about 2.5 min of trip time, because buses can only ever be slowed.
+- **A weak gain is not enough when buses can only slow down.** At T_c = 60 min, slow-only control only halves bunching. A bus that falls behind cannot catch up, so half the spring is missing.
+- **Too strong a gain is expensive.** At T_c = 30 s, buses spend much of their time at the speed floor, and trips take nearly 9 minutes longer.
+
+**In progress:**
+
+- the headroom trade-off: trip time against EWT as δ varies;
+- a discrete driver display: the target shown as a few speed levels, refreshed every few seconds;
+- driver response lag.
 
 ## Assumptions and limitations
 
@@ -89,13 +144,17 @@ The paper's linear analysis only holds while the speed command stays within its 
 - Buses can overtake freely.
 - Speeds are lumped effective values, calibrated to off-peak (after 23:30) scheduled times. Peak trips are probably slower.
 - H = 5 min is the midpoint of a published 3–7 min range. The real headway varies through the evening.
+- The controller estimates headways from nominal speeds and average dwells, not from each bus's actual history.
+- No acceleration limit is applied. The modelled speeds are effective averages, and the controller changes them by a fraction of a percent per update, far below what a bus can manage.
 
 ## How to run
 
 ```bash
 python -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
-python busBunch.py                 # noise sweep (about 1 min): saves and shows traffic_noise_sweep.png
+python busBunch.py                 # no control (about 3 min): traffic_noise_sweep.png, feedback_profile.png
+python tc_sweep.py                 # controller gain sweep (about 4 min): tc_sweep.png
+python delta_sweep.py              # headroom sweep (about 6 min): delta_sweep.png, delta_tradeoff.png
 python busBunchVisualisation.py    # one run, animated
 ```
 

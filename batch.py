@@ -2,6 +2,8 @@ import numpy as np
 from sim import simulate_run
 from helpers import headway_stats
 
+EWT_STOPS = (20, 29)   # stop before the expressway; last boarding stop (30, the terminal, is alight-only)
+
 
 def ci95(x):
     # 95% CI half-width; one value per run, so runs are the independent samples
@@ -15,7 +17,8 @@ def run_batch(n_runs=100, **sim_kwargs):
     Each metric is computed per run first, so runs are the independent samples for the CIs.
     Returns a dict of means and 95% CI half-widths:
         prob, prob_ci:       % of buses bunched
-        ewt, ewt_ci:         route-average EWT (s), stops 1-29 (per-passenger average under uniform demand)
+        ewt20, ewt20_ci:     EWT (s) at stop 20 (one key pair per stop in EWT_STOPS)
+        ewt29, ewt29_ci:     EWT (s) at stop 29
         ewt_stop:            mean EWT at every stop (array of 31)
         trip, trip_ci:       mean trip time (min), averaged within each run first
     """
@@ -28,10 +31,11 @@ def run_batch(n_runs=100, **sim_kwargs):
         trip.append(np.mean(list(result["trip_times"].values())) / 60)  # buses in a run are not independent
 
     ewt_all = np.array(ewt_all)                     # (runs, 31)
-    ewt_route = ewt_all[:, 1:30].mean(axis=1)       # per-run route average, stops 1-29
-    return {
+    out = {
         "prob": np.mean(prob), "prob_ci": ci95(prob),
-        "ewt": ewt_route.mean(), "ewt_ci": ci95(ewt_route),
         "ewt_stop": ewt_all.mean(axis=0),
         "trip": np.mean(trip), "trip_ci": ci95(trip),
     }
+    for k in EWT_STOPS:
+        out[f"ewt{k}"], out[f"ewt{k}_ci"] = ewt_all[:, k].mean(), ci95(ewt_all[:, k])
+    return out
