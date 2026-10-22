@@ -1,10 +1,11 @@
 from helpers import Bus, BusStop, distance, H
+import math
 
 DISPATCH_END = 7200  # last dispatch at t <= 2 h (17:00-19:00 peak)
 TIMEOUT = 12600  # safety cap only; runs normally end when every bus is terminal
 
 
-def simulate_run(record=False, controller = None, traffic_factor = 1.0):
+def simulate_run(record=False, controller = None, traffic_factor = 1.0, control_period = 10):
     """One peak-window run.
 
     Returns a dict with
@@ -14,6 +15,9 @@ def simulate_run(record=False, controller = None, traffic_factor = 1.0):
                        entry 0 is dispatch, entry k is arrival at stop k; shorter than 31 if cut off
         trip_times: {bus index: terminal arrival time - dispatch time} (s), for buses that finished
         snapshots:  list (one per tick) of {bus index: position (km)} for active buses if record, else None
+
+    controller: function(bus, bus_tracker, time) -> speed fraction r, applied to the drawn leg speed
+                every control_period ticks (the driver's display refresh); None = no control
     """
     busStops = [BusStop(distance[j], j, traffic_factor) for j in range(len(distance))]
     time = 0
@@ -26,7 +30,8 @@ def simulate_run(record=False, controller = None, traffic_factor = 1.0):
         # bus dispatch
         if time % H == 0 and time <= DISPATCH_END:
             bus = Bus(len(bus_tracker))
-            bus.speed = busStops[0].driving_speed()
+            bus.base_speed = busStops[0].driving_speed()   # drawn leg speed; kept as separate variable to be passed into controller
+            bus.speed = bus.base_speed
             bus_tracker.append(bus)
             bus.arrival_times.append(time)
 
@@ -35,6 +40,8 @@ def simulate_run(record=False, controller = None, traffic_factor = 1.0):
                 continue
             if bus.dwell_end > time:
                 continue
+            if controller is not None and ((time % control_period == 0) or (time == math.ceil(bus.dwell_end))):
+                bus.speed = bus.base_speed * controller(bus, bus_tracker, time)
             bus.move()
 
             if bus.position == busStops[bus.last_stop + 1].distance:
@@ -44,7 +51,8 @@ def simulate_run(record=False, controller = None, traffic_factor = 1.0):
                 else:
                     bus.last_stop += 1
                     bus.dwell_end = time + busStops[bus.last_stop].dwell_time(time)
-                    bus.speed = busStops[bus.last_stop].driving_speed()
+                    bus.base_speed = busStops[bus.last_stop].driving_speed()
+                    bus.speed = bus.base_speed
 
         # bunching: follower has caught or passed its leader, both still on route
         for j in range(len(bus_tracker) - 1):
