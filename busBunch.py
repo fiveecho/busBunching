@@ -8,10 +8,10 @@ PROFILE_RUNS = 200
 
 # boarding feedback: on = model (dwell grows with time since the last bus, Poisson boarding);
 # off = every bus dwells for the model's mean, so headway no longer affects dwell
-FEEDBACK = {"boarding feedback on (model)": True, "boarding feedback off (constant dwell)": False}
+FEEDBACK = {"boarding feedback on (model)": True}
 
 if __name__ == "__main__":
-    # 1. traffic-noise sweep, no control, with and without boarding feedback
+    # 1. traffic-noise sweep, no control
     traffic_factor = np.arange(0.0, 1.5, 0.2)
     results = {name: [run_batch(RUN_COUNT, traffic_factor=f, passenger_noise=fb) for f in traffic_factor]
                for name, fb in FEEDBACK.items()}

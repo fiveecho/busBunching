@@ -30,6 +30,7 @@ if __name__ == "__main__":
                         marker='o', capsize=3, label=name)
         ax.axhline(baseline[key], color='grey', linestyle='--', label='no control')
         ax.axvline(74, color='red', linestyle=':', label='predicted instability (about 74 min)')
+        ax.axvline(0.5, color='red', linestyle=':', label='predicted instability (about 25 sec)')
         ax.set(title=title, ylabel=unit)
     axs[0].legend(fontsize=8)
     axs[3].set(xscale='log', xlabel='T_c (min), gain = 1/T_c')

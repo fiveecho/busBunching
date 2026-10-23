@@ -27,7 +27,7 @@ def get_speed(expressway = False, traffic_factor = 0):
         return (EXPRESSWAY_SPEED if expressway else ARTERIAL_SPEED)/3600
     
     if expressway:
-        mean, std = EXPRESSWAY_SPEED, traffic_factor * 3
+        mean, std = EXPRESSWAY_SPEED, traffic_factor * 1
         low, high = max(mean - 3 * std, 3), min(mean + 3 * std, 60)
     else:
         mean, std = ARTERIAL_SPEED, traffic_factor * 5
