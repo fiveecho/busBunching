@@ -16,13 +16,16 @@ A first-order lag 1/(τs + 1) approaches its target gradually, never overshoots,
 
 
 ### Stabilising an open-loop-unstable plant needs a minimum gain as well as a maximum
-*Worked out through discussion.*
+*Worked out through discussion, building on Daganzo and Pilachowski (2011).*
 
 Per mode, the plant is 1/(s − β_θ), with a right-half-plane pole set by the boarding rate β. The controller has to supply enough negative feedback to beat it: α > β/2, which is T_c below about 74 min. The update delay caps the gain from above. So the controller has a stability window, not just an upper limit.
 
-In Nyquist terms, with one open-loop RHP pole, the plot must encircle −1 once anticlockwise; avoiding it is not enough. Leaving out Daganzo and Pilachowski's cancellation term is what made this lower edge appear.
+In Nyquist terms, with one open-loop RHP pole, the plot must encircle −1 once anticlockwise; avoiding it is not enough. Leaving out Daganzo and Pilachowski's cancellation term is what made this lower edge appear. With that term, their law is stable for any positive gain.
+
+The upper edge, at 2T < T_c (about 20 s at a 10 s display refresh), is the same as their condition αΔt < 0.5: the sampled pole is z = 1 − KT. I reproduced it for my setup and then checked it against their eigenvalues (eq. 25).
 
 ### Diagonalising a platoon: the graph Laplacian
+*Worked through myself, following Lestas and Vinnicombe (2007, section III), with help from Claude.*
 
 For the spring law on an open chain with "ghost" end buses, I:
 
@@ -43,6 +46,23 @@ On a ring, the boarding matrix and the spring matrix share eigenvectors, so the 
 The boarding coupling is one-sided, so the matrix is non-normal. Disturbances can then grow for a while as they travel down the chain, even when every eigenvalue is stable. This is related to string stability.
 
 - **Lesson:** eigenvalues settle asymptotic stability, but not how large a disturbance gets on the way.
+
+### Boarding is a first derivative, the spring is a Laplacian
+
+I was uneasy about using the spring's eigenvectors to analyse the boarding matrix, since they are different matrices. The fix was to notice that boarding acts like a first derivative along the platoon, and to split it exactly:
+
+lₙ − lₙ₋₁ = ½(2lₙ − lₙ₋₁ − lₙ₊₁) + ½(lₙ₊₁ − lₙ₋₁)
+
+That is, B = ½L + C + D, where:
+
+- **½L** is half the Laplacian, an anti-diffusion term;
+- **C** is a centred difference (skew-symmetric). It is transport: patterns travel along the platoon without growing;
+- **D** is a pair of end terms.
+
+The whole system is then −(α − β/2)L + βC + βD. Half of B is the Laplacian, which is why the spring's eigenvectors work. The stability edge is simply net diffusion α − β/2 reaching zero.
+
+- **Lesson:** C is skew-symmetric, so its eigenvalues are purely imaginary. On its own it rotates patterns (travelling waves) without growing or shrinking them. On a ring it shares the Laplacian's eigenvectors, so it only shifts each pole vertically and cannot change stability.
+- **Lesson (worked out through discussion):** any square matrix splits uniquely into a symmetric part and a skew-symmetric part, M = ½(M + Mᵀ) + ½(M − Mᵀ), much as a function splits into even and odd parts. For dx/dt = Mx, d‖x‖²/dt = 2xᵀMx only sees the symmetric part, because xᵀCx = 0 for any skew-symmetric C. So the symmetric part decides growth and the skew part only rotates. It is the natural first move when a non-symmetric matrix appears and the tools I have (real eigenvalues, Gershgorin, orthogonal modes) need symmetry. The same split appears through Taylor expansion: a backward difference is a centred derivative plus half a second difference, f(n) − f(n−1) ≈ f′ − ½f″. This is the "numerical diffusion" of one-sided (upwind) differencing in computational fluid dynamics, with the opposite sign here.
 
 ### Discrete or continuous? One model, with continuous as a limit
 

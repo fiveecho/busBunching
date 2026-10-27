@@ -10,9 +10,9 @@ This project was also a way to extend my control background. What I learned alon
 
 ## Headline so far
 
-Without control, bunching appears even with no traffic noise at all. Uneven passenger boarding alone bunches about 11% of buses over a two-hour evening peak. At the baseline traffic noise this rises to 65%, and excess wait time (EWT) reaches about 2 minutes by the last boarding stop.
+Without control, bunching appears even with no traffic noise at all. Uneven passenger boarding alone bunches about 10% of buses over a two-hour evening peak. At the baseline traffic noise this rises to 64%, and excess wait time (EWT) reaches about 2 minutes by the last boarding stop.
 
-A slow-only version of Daganzo and Pilachowski's cooperative speed control, which never asks a bus to go faster than traffic allows, cuts bunching from 65% to under 1% and EWT at the last boarding stop from 131 s to 11 s. It costs about 2.5 minutes of trip time.
+A slow-only version of Daganzo and Pilachowski's cooperative speed control, which never asks a bus to go faster than traffic allows, cuts bunching from 64% to under 1% and EWT at the last boarding stop from 129 s to 9 s. It costs about 2.3 minutes of trip time. Adding the paper's speed headroom on top buys almost nothing more at this gain.
 
 ## Model
 
@@ -63,17 +63,17 @@ All results are means over independent runs with 95% confidence intervals (1.96 
 
 ![Noise sweep](traffic_noise_sweep.png)
 
-The figure uses 100 runs per level and shows the model (blue) alongside a version with the boarding feedback switched off (orange; explained below). The table below uses 200 runs per level, for the model:
+The figure uses 100 runs per level. The table below uses 200 runs per level:
 
 | Traffic factor (arterial sd) | % bunched | EWT stop 20 | EWT stop 29 | Trip time |
 |---|---|---|---|---|
-| 0 (boarding noise only) | 10.8 ± 1.3 | 9 ± 1 s | 40 ± 2 s | 59.2 min |
-| 0.6 (3 km/h) | 48.6 ± 2.1 | 42 ± 2 s | 97 ± 3 s | 59.7 min |
-| 1.0 (5 km/h, baseline) | 65.2 ± 1.7 | 77 ± 3 s | 128 ± 3 s | 60.8 min |
-| 1.4 (7 km/h) | 76.6 ± 1.3 | 107 ± 3 s | 152 ± 5 s | 62.7 min |
+| 0 (boarding noise only) | 10.3 ± 1.2 | 9 ± 1 s | 38 ± 2 s | 59.2 min |
+| 0.6 (3 km/h) | 45.6 ± 2.0 | 41 ± 2 s | 93 ± 3 s | 59.7 min |
+| 1.0 (5 km/h, baseline) | 64.0 ± 1.6 | 77 ± 2 s | 129 ± 3 s | 60.8 min |
+| 1.4 (7 km/h) | 75.6 ± 1.3 | 104 ± 4 s | 153 ± 5 s | 62.6 min |
 
-- **Bunching is not only a traffic problem.** With traffic noise switched off, the boarding feedback alone still bunches about 11% of buses. This is the instability that the first term of Daganzo and Pilachowski's control law is designed to cancel.
-- **Headway errors amplify along the route.** At baseline, EWT grows from about 23 s at stop 10 to 77 s at stop 20 and about 2 min at stop 29. Passengers late on the route bear most of the cost.
+- **Bunching is not only a traffic problem.** With traffic noise switched off, the boarding feedback alone still bunches about 10% of buses. This is the instability that the first term of Daganzo and Pilachowski's control law is designed to cancel.
+- **Headway errors amplify along the route.** At baseline, EWT grows from about 24 s at stop 10 to 77 s at stop 20 and about 2 min at stop 29. Passengers late on the route bear most of the cost.
 - **The baseline sits on the steep part of the curve,** so the controller will be tested at several noise levels rather than at the baseline alone.
 
 ### Why buses bunch: a disturbance and an amplifier
@@ -89,15 +89,15 @@ Two mechanisms drive bunching here. Each can be switched off separately:
 
 | Case | % bunched | EWT stop 20 | EWT stop 29 |
 |---|---|---|---|
-| Traffic noise + boarding feedback (model) | 66.2 ± 1.7 | 78.5 s | 130.8 s |
-| Traffic noise only | 9.4 ± 1.1 | 18.9 s | 32.4 s |
-| Boarding feedback only | 11.3 ± 1.5 | 9.5 s | 40.3 s |
+| Traffic noise + boarding feedback (model) | 64.2 ± 1.8 | 77 ± 3 s | 127 ± 4 s |
+| Traffic noise only | 6.0 ± 1.0 | 19 ± 1 s | 26 ± 1 s |
+| Boarding feedback only | 9.4 ± 1.3 | 9 ± 1 s | 38 ± 2 s |
 | Neither | 0.0 | 0 s | 0 s |
 
-- **Traffic noise alone makes headway errors accumulate like a random walk.** EWT rises roughly linearly along the route, with a jump across the long expressway leg, but nothing amplifies the errors.
+- **Traffic noise alone makes headway errors accumulate like a random walk.** EWT rises roughly linearly along the route, but nothing amplifies the errors.
 - **Boarding feedback alone amplifies even the small randomness in boarding numbers.** EWT starts near zero and accelerates along the route.
-- **Together they are far worse than the sum:** 131 s at the last boarding stop, against 32 + 40 s. In control terms, the boarding feedback is an unstable plant and traffic noise is the disturbance it amplifies. This is why the controller needs a real restoring force, not just smoothing.
-- With feedback on, EWT dips slightly across the expressway, where there is no boarding and nearby buses draw independent speeds. This has not been investigated further.
+- **Together they are far worse than the sum:** 127 s at the last boarding stop, against 26 + 38 s. In control terms, the boarding feedback is an unstable plant and traffic noise is the disturbance it amplifies. This is why the controller needs a real restoring force, not just smoothing.
+- **The expressway sd matters for an unexpected reason.** An earlier version used 3 km/h on the expressway, and EWT then stayed flat across that leg. The extra noise did add irregularity, but it also let about 5 of 23 buses per run swap order, splitting bunched pairs. That is an artefact of drawing every bus's speed independently. At 1 km/h, which is more realistic for free-flowing traffic (see Model), EWT rises steadily through the leg.
 
 ## Control
 
@@ -122,15 +122,15 @@ Here e_front and e_rear are the front and rear headway errors (nominal headway �
 
 | Configuration | % bunched | EWT stop 20 | EWT stop 29 | Trip time |
 |---|---|---|---|---|
-| No control | 65.4 ± 1.7 | 77 ± 3 s | 131 ± 4 s | 60.8 min |
-| No limits, T_c = 10 min | 0.0 | 3 s | 3 s | 60.8 min |
-| Slow-only, T_c = 10 min | 0.9 ± 0.4 | 11 ± 1 s | 11 ± 1 s | 63.3 min |
-| Slow-only, T_c = 60 min | 36.5 ± 1.7 | 50 ± 2 s | 64 ± 2 s | 61.9 min |
-| Slow-only, T_c = 30 s | 0.0 | 8 s | 10 s | 69.5 min |
+| No control | 64.0 ± 1.6 | 77 ± 2 s | 129 ± 3 s | 60.8 min |
+| No limits, T_c = 10 min | 0.0 | 3 s | 3 s | 60.7 min |
+| Slow-only, T_c = 10 min | 0.4 ± 0.3 | 11 ± 1 s | 9 ± 1 s | 63.1 min |
+| Slow-only, T_c = 60 min | 32.9 ± 1.6 | 50 ± 2 s | 59 ± 2 s | 61.9 min |
+| Slow-only, T_c = 30 s | 0.0 | 8 s | 9 s | 69.0 min |
 
-- **Slow-only control works with a strong enough gain.** At T_c = 10 min it removes nearly all bunching. It costs about 2.5 min of trip time, because buses can only ever be slowed.
+- **Slow-only control works with a strong enough gain.** At T_c = 10 min it removes nearly all bunching. It costs about 2.3 min of trip time, because buses can only ever be slowed.
 - **A weak gain is not enough when buses can only slow down.** At T_c = 60 min, slow-only control only halves bunching. A bus that falls behind cannot catch up, so half the spring is missing.
-- **Too strong a gain is expensive.** At T_c = 30 s, buses spend much of their time at the speed floor, and trips take nearly 9 minutes longer.
+- **Too strong a gain is expensive.** At T_c = 30 s, buses spend much of their time at the speed floor, and trips take about 8 minutes longer.
 
 **In progress:**
 
