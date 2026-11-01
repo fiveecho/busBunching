@@ -180,9 +180,20 @@ where w is the disturbance (traffic and boarding noise). B holds each bus's fron
 
 Keeping only the ½L part, the eigenvectors of L decouple the system into one loop per mode, each with plant 1/(s − βλₖ/2) and controller gain αλₖ. For N = 12, the resulting closed-loop poles are within 0.5% of the exact eigenvalues of βB − αL.
 
+**Continuous or sampled?** The simulation advances in 1 s ticks, and the display refreshes every T = 10 s, holding each command in between. So the real controller is sampled, not continuous. The dynamics that matter are much slower than either: the boarding instability grows with a time constant of about 20 min, and at T_c = 10 min the controller corrects errors over about 3 min. Over one 10 s refresh, an error changes by only about 6%. The analysis therefore treats the system as continuous, with one exception: the upper limit on the gain. That limit only appears when corrections become fast enough to be comparable with the refresh interval, so it needs the sampled model.
+
 **Lower limit on the gain.** Each mode has one unstable open-loop pole, at p = βλₖ/2, which is the boarding feedback. The closed-loop pole is (β/2 − α)λₖ, so every mode is stable if and only if α > β/2, which is T_c below about 81 min. The ratio of controller gain to plant pole is 2α/β for every mode, so all modes reach this limit together. Applying Gershgorin's theorem to the full matrix βB − αL, with no approximation, gives a weaker but guaranteed condition: α ≥ β, or T_c ≤ 40 min. The chosen T_c = 10 min (α = 6 per hour) satisfies both by a wide margin.
 
-**Upper limit on the gain.** The display holds each command for T = 10 s. Over one hold, a mode's error changes by a factor (1 − KT), where K is the mode's closed-loop decay rate. If KT exceeds 1, the correction overshoots and the error flips sign at each update; if KT exceeds 2, it also grows. The fastest mode has K ≈ 4α, so the limit is T_c > 2T = 20 s.
+**Upper limit on the gain (sampled model).** For each mode, write K = αλₖ for the controller gain and p = βλₖ/2 for the boarding pole. Over one refresh, the command is held at the value set from the error at the start, so the error is multiplied by a fixed factor z each refresh:
+
+  z = e^{pT} − (K/p)(e^{pT} − 1) ≈ 1 − (K − p)T
+
+The mode is stable if −1 < z < 1:
+
+- **z < 1** reduces exactly to K > p: the lower limit above, recovered from the sampled model.
+- **z > −1** requires (K − p)T < 2, approximately. If a correction over one refresh is larger than the error itself, it overshoots, so the error changes sign at every update. If it is more than twice the error, each overshoot is bigger than the last.
+
+The fastest mode has K ≈ 4α, so the upper limit is T_c > 2T = 20 s. When (K − p)T is small, z ≈ e^{−(K−p)T}, which is the continuous pole s = −(K − p). This is why the continuous analysis holds at the chosen gain: there (K − p)T ≈ 0.06, and the two models agree to 0.1%.
 
 **Driver lag and the Nyquist plot.** For the fastest mode, with the refresh approximated as a delay of T/2 and a first-order driver lag τ, the open loop is
 
