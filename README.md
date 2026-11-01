@@ -2,13 +2,13 @@
 
 A simulation of bus bunching on SMRT service 190 (Kampong Bahru Terminal to Choa Chu Kang Interchange), built from real LTA stop-distance data and calibrated to the published timetable. The goal is to test a cooperative speed-control law (Daganzo and Pilachowski, 2011) under the constraints a Singapore operator actually faces. The main constraint is that buses can be slowed but not sped up.
 
-**Status:** the uncontrolled baseline, the controller, the headroom test and the stability analysis are complete. Driver lag and a discrete driver display are in progress.
+**Status:** complete draft (November 2026): uncontrolled baseline, controller, headroom test, stability analysis and driver-lag check. Final polish in progress.
 
 This project was also a way to extend my control background. What I learned along the way, and which results I derived myself, is in [docs/learning_log.md](docs/learning_log.md).
 
 <img width="2400" height="800" alt="Animation of 190 buses along the route, with bunched buses in red" src="https://github.com/user-attachments/assets/81368f2a-8a7e-4990-985b-4adb60d7a8e3" />
 
-## Headline so far
+## Headline
 
 Without control, bunching appears even with no traffic noise at all. Uneven passenger boarding alone bunches about 10% of buses over a two-hour evening peak. At the baseline traffic noise this rises to 64%, and excess wait time (EWT) reaches about 2 minutes by the last boarding stop.
 
@@ -16,10 +16,10 @@ A slow-only version of Daganzo and Pilachowski's cooperative speed control, whic
 
 ## Model
 
-The model is tick-based, with 1-second ticks. Buses are dispatched every 5 minutes from 17:00 to 19:00, which gives 25 buses. Each run continues until every bus has reached the terminal.
+The model is tick-based, with 1-second ticks. Buses are dispatched every 5 minutes, aligning with weekday peak hour headways, over the span of two simulated hours. Each run continues until every bus has reached the terminal.
 
 - **Route:** 31 stops over 22.3 km, from the LTA DataMall BusRoutes API (direction 2). The data is cached in `data/route_190_dir2.json`. It includes a 9.1 km non-stop expressway leg between stop 20 (Raffles Town Club) and stop 21 (Blk 223).
-- **Speed:** each bus draws one speed per leg, when it leaves a stop. The draw is a normal distribution truncated at the mean ± 3 sd, so the truncation does not shift the mean (with a floor of 5 km/h arterial and 3 km/h expressway). A *traffic factor* scales both standard deviations. Factor 1.0 is the baseline: 5 km/h on arterial roads, about 13 s of travel-time sd on a typical 0.45 km leg, and 1 km/h on the expressway. Because each bus draws its own speed, the sd represents how differently buses fare on the same leg, not day-to-day variation (which affects all buses alike and leaves headways unchanged). On arterial roads that difference is large (one bus catches a red light, the next a green). On a free-flowing expressway, buses a few minutes apart share conditions, so it is small.
+- **Speed:** each bus draws one speed per leg, when it leaves a stop. The draw is a normal distribution truncated at the mean ± 3 sd, so the truncation does not shift the mean (with a floor of 5 km/h arterial and 3 km/h expressway). A *traffic factor* scales both standard deviations. Factor 1.0 is the baseline: 5 km/h on arterial roads, about 13 s of travel-time sd on a typical 0.45 km leg, and 1 km/h on the expressway. Because each bus draws its own speed, the sd represents how differently buses fare on the same leg. On arterial roads that difference is large (one bus catches a red light, the next a green). On a free-flowing expressway, buses a few minutes apart share conditions, so it is small.
 - **Dwell:** a fixed 15.6 s per stop, plus 1.52 s per boarding passenger. Boardings are Poisson-distributed, with mean = arrival rate × time since the previous bus left that stop. Late buses therefore pick up more passengers and fall further behind, which is the feedback that causes bunching. The average dwell works out at 29.3 s.
 - **Bunching:** a pair of consecutive buses is counted as bunched once the follower catches or passes its leader. Overtaking is allowed.
 
@@ -27,7 +27,7 @@ The model is tick-based, with 1-second ticks. Buses are dispatched every 5 minut
 |---|---|---|
 | Stop distances | 31 stops, 22.3 km | LTA DataMall BusRoutes API |
 | Headway H | 5 min | Midpoint of 190's PM-peak frequency of 3–7 min (DataMall BusServices) |
-| Boarding time | 1.52 s per passenger | [Singapore bus stop study](https://www.sciencedirect.com/science/article/pii/S1077291X22000753) |
+| Boarding time | 1.52 s per passenger | Liu et al. (2017), a Singapore field study of bus stop designs |
 | Fixed stop delay | 5.6 s (doors) + 10 s (acceleration and deceleration loss) | Same study. It measured about 9 s to decelerate and 11 s to accelerate; with linear speed ramps, about half of each is lost time (our assumption). |
 | Passenger arrivals | 10 per 5 min per stop, the same at every stop | Assumption. Bus capacity suggests about 6–10. |
 | Arterial speed | 24.5 km/h (effective) | Calibrated to the 190 timetable, below |
@@ -35,7 +35,7 @@ The model is tick-based, with 1-second ticks. Buses are dispatched every 5 minut
 
 ### Calibration
 
-The two speeds are *effective* speeds: they bundle traffic signals, congestion and merging into one number. They were fitted, with traffic noise off, to the scheduled 190 times for departures after 23:30.
+The two speeds are *effective* speeds: they bundle traffic signals, congestion and merging into one number. They were fitted, with traffic noise off, to the scheduled 190 times for departures as per last bus timings.
 
 | Checkpoint | Timetable | Simulated, no noise | Simulated, baseline noise |
 |---|---|---|---|
@@ -97,13 +97,13 @@ Two mechanisms drive bunching here. Each can be switched off separately:
 - **Traffic noise alone makes headway errors accumulate like a random walk.** EWT rises roughly linearly along the route, but nothing amplifies the errors.
 - **Boarding feedback alone amplifies even the small randomness in boarding numbers.** EWT starts near zero and accelerates along the route.
 - **Together they are far worse than the sum:** 127 s at the last boarding stop, against 26 + 38 s. In control terms, the boarding feedback is an unstable plant and traffic noise is the disturbance it amplifies. This is why the controller needs a real restoring force, not just smoothing.
-- **The expressway sd matters for an unexpected reason.** An earlier version used 3 km/h on the expressway, and EWT then stayed flat across that leg. The extra noise did add irregularity, but it also let about 5 of 23 buses per run swap order, splitting bunched pairs. That is an artefact of drawing every bus's speed independently. At 1 km/h, which is more realistic for free-flowing traffic (see Model), EWT rises steadily through the leg.
+
 
 ## Control
 
 The controller is based on Daganzo and Pilachowski (2011). Each bus adjusts its speed using the gaps to the bus in front and the bus behind, as if neighbouring buses were joined by springs.
 
-**Measuring the gaps.** The route has two speeds, 24.5 km/h arterial and 43 km/h on the expressway, so a distance gap does not translate directly into a time gap. The route is therefore mapped onto an *equivalent arterial* coordinate: the expressway leg is shrunk by 24.5/43, and each stop adds the distance an arterial bus covers during an average 29.3 s dwell. A gap in this coordinate divided by 24.5 km/h is a nominal time headway. This is a model-based estimate: it assumes nominal speeds and average dwells, not each bus's actual ones.
+**Measuring the gaps.** The route has two speeds, 24.5 km/h arterial and 43 km/h on the expressway, so a distance gap does not translate directly into a time gap. The route is therefore mapped onto an equivalent arterial coordinate: the expressway leg is shrunk by 24.5/43, and each stop adds the distance an arterial bus covers during an average 29.3 s dwell. A gap in this coordinate divided by 24.5 km/h is a nominal time headway. This is a model-based estimate: it assumes nominal speeds and average dwells, not each bus's actual ones.
 
 **The law.** Each bus gets a speed fraction r, which multiplies its drawn leg speed:
 
@@ -155,18 +155,13 @@ Daganzo and Pilachowski run every bus slightly below cruise speed, by a headroom
 
 So the controller used here is slow-only with no headroom: δ = 0, T_c = 10 min.
 
-**In progress:**
-
-- a discrete driver display: the target shown as a few speed levels, refreshed every few seconds;
-- driver response lag.
-
 ## Stability analysis
 
 This section analyses the no-limits controller as a linear system. The slow-only cap is a saturation, which this analysis does not cover; those results come from the simulation.
 
 **The platoon as a MIMO system.** Let lₙ be bus n's lateness against its nominal schedule, in seconds. Two things change it:
 
-- **Boarding.** A front gap e seconds longer than H brings b·q·e extra seconds of dwell at each stop. Spread over the time between stops, this makes lateness grow at β·eₙ, with β = b·q/T_s ≈ 1.49 per hour (b = 1.52 s per passenger, q = 1/30 passengers per second, T_s = 122 s).
+- **Boarding.** A front gap e seconds longer than H brings b·q·e extra seconds of dwell at each stop. Spread over the time between stops, this makes lateness grow at β·eₙ, with β = b·q/T_s ≈ 1.49 per hour (b = 1.52 s per passenger, q = 1/30 passengers per second, T_s = 122 s). The per-stop factor b·q ≈ 0.05 is what Daganzo (2009) calls the attraction parameter. He gives typical values of 0.01 to 1, and about 0.1 for a busy San Francisco line at rush hour, so this route sits in the normal range. This feedback mechanism was first described by Newell and Potts (1964).
 - **Control.** The speed fraction r = 1 + α(e_front − e_rear) changes lateness at rate 1 − r.
 
 Stacking all N buses gives
@@ -201,9 +196,19 @@ With one unstable open-loop pole, the Nyquist plot must encircle −1 once antic
 | 30 s | 6.4 × 10⁻³ | 70° |
 | 300 s | 4.1 × 10⁻³ | 27° |
 
-A lag of tens of seconds costs about 10° of phase; only a lag of several minutes would threaten stability. Ignoring the refresh, the Routh–Hurwitz condition on τs² + (1 − τp)s + (K − p) requires τ < 1/p ≈ 20 min.
+A lag of tens of seconds costs about 10° of phase; only a lag of several minutes would threaten stability. Ignoring the refresh, the closed-loop characteristic equation is the quadratic τs² + (1 − τp)s + (K − p). Both roots have negative real parts only if all three coefficients are positive, which requires τ < 1/p ≈ 20 min: the driver must respond faster than the boarding instability grows.
 
 ![Nyquist plot](figures/nyquist.png)
+
+**Driver lag in simulation.** The simulation can add a first-order lag between the displayed command and the speed the driver actually applies (`driver_lag` in `simulate_run`). 200 runs each, T_c = 10 min, baseline traffic noise:
+
+| Driver lag τ | No limits: % bunched | No limits: EWT stop 29 | Slow-only: % bunched | Slow-only: EWT stop 29 |
+|---|---|---|---|---|
+| 0 | 0.0 | 3 s | 0.4 ± 0.2 | 8 s |
+| 30 s | 0.0 | 3 s | 0.6 ± 0.3 | 9 s |
+| 5 min | 0.0 | 6 s | 2.3 ± 0.6 | 12 s |
+
+As predicted, a 30 s lag makes no measurable difference, and even 5 minutes costs only a few seconds of EWT. At the predicted limit of 20 min, performance degrades sharply (no limits: 8% bunched, EWT 29 s), but nothing blows up within a single trip, as expected for growth that is only just unstable. The slow-only controller is more sensitive to lag, which the linear analysis cannot show.
 
 **What the analysis leaves out.**
 
@@ -212,6 +217,12 @@ A lag of tens of seconds costs about 10° of phase; only a lag of several minute
 - **How large errors get.** That depends on the disturbances, which the simulation measures as EWT and % bunched.
 
 The method of diagonalising a bidirectional platoon and checking each mode follows Lestas and Vinnicombe (2007); the sampled stability condition matches Daganzo and Pilachowski's αΔt < 0.5.
+
+## Future work
+
+- **A discrete driver display.** Daganzo and Pilachowski suggest showing drivers an approximate speed limit on a screen. Rounding the command to a few levels would test whether drivers could realistically follow this controller.
+- **Trajectory-based headways.** Measuring headways from when the bus ahead actually passed, instead of from nominal speeds, would remove the estimation error noted below.
+- **Holding at stops** as an alternative to slowing buses on the road, and a realistic demand profile with bus capacity.
 
 ## Assumptions and limitations
 
@@ -249,7 +260,9 @@ python -m scripts.routePull
 
 ## References
 
+- Daganzo, C. F. (2009). A headway-based approach to eliminate bus bunching: Systematic analysis and comparisons. *Transportation Research Part B*, 43, 913–921. https://doi.org/10.1016/j.trb.2009.04.002
 - Daganzo, C. F. and Pilachowski, J. (2011). Reducing bunching with bus-to-bus cooperation. *Transportation Research Part B*, 45(1), 267–277.
 - Lestas, I. and Vinnicombe, G. (2007). Scalability in heterogeneous vehicle platoons. *Proceedings of the American Control Conference*, 4678–4683.
+- Liu, X., Yang, Y., Meng, M. and Rau, A. (2017). Impact of different bus stop designs on bus operating time components. *Journal of Public Transportation*, 20(1), 104–118. https://doi.org/10.5038/2375-0901.20.1.6
 - LTA DataMall: BusRoutes and BusServices APIs.
-- Singapore bus stop study, ScienceDirect article S1077291X22000753 (boarding and stop-delay parameters).
+- Newell, G. F. and Potts, R. B. (1964). Maintaining a bus schedule. *Proceedings of the 2nd Australian Road Research Board*, 2, 388–393.

@@ -38,7 +38,7 @@ That gives λ_k = 2 − 2cos(kπ/N), with mode shapes cos((n − ½)kπ/N). I al
 
 - **Lesson:** a shift-invariant system is diagonalised by waves (e^{inθ}), in the same way an LTI system is diagonalised by e^{st}. Boundaries decide which waves fit.
 
-###
+### Routh-Hurwitz
 
 
 ### Saturation: slow-only control and headroom
