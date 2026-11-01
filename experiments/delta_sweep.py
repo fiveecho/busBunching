@@ -1,7 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from batch import run_batch
-from controlFunction import make_controller
+from model import FIGURES
+from model.batch import run_batch
+from model.controlFunction import make_controller
 
 RUN_COUNT = 200
 
@@ -33,7 +34,7 @@ if __name__ == "__main__":
         ax.set(title=title, ylabel=unit)
     axs[0].legend(fontsize=8)
     axs[3].set(xlabel='headroom delta (fraction of cruise speed); slow-only, r in [0.5, 1]')
-    fig.savefig('delta_sweep.png')
+    fig.savefig(FIGURES / 'delta_sweep.png')
 
     # trade-off: what each extra minute of trip time buys in EWT at the last boarding stop
     fig2, ax2 = plt.subplots(figsize=(7, 5))
@@ -47,5 +48,5 @@ if __name__ == "__main__":
     ax2.set(xlabel='average trip time (min)', ylabel='EWT at stop 29 (s)',
             title='Cost of control: trip time against EWT (labels: delta)')
     ax2.legend(fontsize=8)
-    fig2.savefig('delta_tradeoff.png')
+    fig2.savefig(FIGURES / 'delta_tradeoff.png')
     plt.show()

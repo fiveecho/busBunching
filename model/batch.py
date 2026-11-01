@@ -1,6 +1,6 @@
 import numpy as np
-from sim import simulate_run
-from helpers import headway_stats
+from .sim import simulate_run
+from .helpers import headway_stats
 
 EWT_STOPS = (20, 29)   # stop before the expressway; last boarding stop (30, the terminal, is alight-only)
 

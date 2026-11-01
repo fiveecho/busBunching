@@ -1,11 +1,12 @@
-from helpers import Bus, BusStop, distance, H, AVERAGE_PASSENGER_RATE
+from .helpers import Bus, BusStop, distance, H, AVERAGE_PASSENGER_RATE
 import math
 
 DISPATCH_END = 7200  # last dispatch at t <= 2 h (17:00-19:00 peak)
 TIMEOUT = 12600  # safety cap only; runs normally end when every bus is terminal
 
 
-def simulate_run(record=False, controller = None, traffic_factor = 1.0, control_period = 10, passenger_noise = True):
+def simulate_run(record=False, controller = None, traffic_factor = 1.0, control_period = 10, passenger_noise = True,
+                 driver_lag = 0):
     """One peak-window run.
 
     Returns a dict with
@@ -18,6 +19,8 @@ def simulate_run(record=False, controller = None, traffic_factor = 1.0, control_
 
     controller: function(bus, bus_tracker, time) -> speed fraction r, applied to the drawn leg speed
                 every control_period ticks (the driver's display refresh); None = no control
+    driver_lag: first-order lag time constant (s) between the displayed command and the speed the driver
+                applies; 0 = the driver follows the display instantly
     """
     busStops = [BusStop(distance[j], j, traffic_factor) for j in range(len(distance))]
     time = 0
@@ -40,8 +43,15 @@ def simulate_run(record=False, controller = None, traffic_factor = 1.0, control_
                 continue
             if bus.dwell_end > time:
                 continue
-            if controller is not None and ((time % control_period == 0) or (time == math.ceil(bus.dwell_end))):
-                bus.speed = bus.base_speed * controller(bus, bus_tracker, time)
+            if controller is not None:
+                if (time % control_period == 0) or (time == math.ceil(bus.dwell_end)):
+                    bus.r_cmd = controller(bus, bus_tracker, time)   # display refresh
+                if driver_lag > 0:
+                    # first-order lag towards the displayed command, exact for a 1 s tick
+                    bus.r += (1 - math.exp(-1 / driver_lag)) * (bus.r_cmd - bus.r)
+                else:
+                    bus.r = bus.r_cmd
+                bus.speed = bus.base_speed * bus.r
             bus.move()
 
             if bus.position == busStops[bus.last_stop + 1].distance:

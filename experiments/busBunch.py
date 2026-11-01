@@ -1,7 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from batch import run_batch
-from helpers import BEFORE_EXPRESSWAY_INDEX
+from model import FIGURES
+from model.batch import run_batch
+from model.helpers import BEFORE_EXPRESSWAY_INDEX
 
 RUN_COUNT = 100
 PROFILE_RUNS = 200
@@ -27,7 +28,7 @@ if __name__ == "__main__":
         ax.set(title=title, ylabel=unit)
     axs[0].legend(fontsize=8)
     axs[3].set(xlabel='traffic factor (1.0 = 5 km/h arterial sd)')
-    fig.savefig('traffic_noise_sweep.png')
+    fig.savefig(FIGURES / 'traffic_noise_sweep.png')
 
     # 2. EWT along the route: traffic noise (disturbance) x boarding feedback (unstable plant)
     cases = {
@@ -47,5 +48,5 @@ if __name__ == "__main__":
     ax2.axvspan(BEFORE_EXPRESSWAY_INDEX, BEFORE_EXPRESSWAY_INDEX + 1, color='grey', alpha=0.2, label='expressway leg')
     ax2.set(xlabel='stop', ylabel='EWT (s)', title='EWT along the route (no control, 200 runs each)')
     ax2.legend(fontsize=8)
-    fig2.savefig('feedback_profile.png')
+    fig2.savefig(FIGURES / 'feedback_profile.png')
     plt.show()

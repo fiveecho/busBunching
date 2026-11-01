@@ -34,7 +34,7 @@ if __name__ == "__main__":
 
     route = routeGet()
     assert len(route) == 31, f"expected 31 stops, got {len(route)}"
-    path = Path(__file__).parent / "data" / "route_190_dir2.json"
+    path = Path(__file__).resolve().parents[1] / "data" / "route_190_dir2.json"
     path.parent.mkdir(exist_ok=True)
     path.write_text(json.dumps(route, indent=2))
     print(f"wrote {len(route)} stops to {path}")

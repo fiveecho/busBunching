@@ -1,0 +1,12 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bus-bunching-190"
+version = "0.1.0"
+description = "Bus bunching on SMRT 190: simulation and cooperative speed control"
+requires-python = ">=3.10"
+
+[tool.setuptools]
+packages = ["model"]

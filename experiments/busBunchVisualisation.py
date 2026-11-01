@@ -1,9 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
-from helpers import distance, headway_stats
-from controlFunction import make_controller
-from sim import simulate_run
+from model import FIGURES
+from model.helpers import distance, headway_stats
+from model.controlFunction import make_controller
+from model.sim import simulate_run
 
 result = simulate_run(record=True, controller=None)
 snapshots = result["snapshots"]
@@ -84,6 +85,6 @@ ani = FuncAnimation(
     repeat=False
 )
 
-# ani.save(filename="tmp/bus_bunch_no_control.gif", writer="pillow", fps=15)
+# ani.save(filename=FIGURES / 'bus_bunch_no_control.gif', writer="pillow", fps=15)
 
 plt.show()

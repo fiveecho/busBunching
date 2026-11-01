@@ -1,5 +1,5 @@
 import numpy as np
-from helpers import distance, H, ARTERIAL_SPEED, EXPRESSWAY_SPEED, BEFORE_EXPRESSWAY_INDEX, MEAN_DWELL
+from .helpers import distance, H, ARTERIAL_SPEED, EXPRESSWAY_SPEED, BEFORE_EXPRESSWAY_INDEX, MEAN_DWELL
 
 # Equivalent-arterial coordinate: the route stretched so it runs at ARTERIAL_SPEED throughout.
 # The expressway leg is shrunk by ARTERIAL/EXPRESSWAY, and each intermediate stop adds the

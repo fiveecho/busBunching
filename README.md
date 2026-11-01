@@ -2,7 +2,7 @@
 
 A simulation of bus bunching on SMRT service 190 (Kampong Bahru Terminal to Choa Chu Kang Interchange), built from real LTA stop-distance data and calibrated to the published timetable. The goal is to test a cooperative speed-control law (Daganzo and Pilachowski, 2011) under the constraints a Singapore operator actually faces. The main constraint is that buses can be slowed but not sped up.
 
-**Status:** the uncontrolled baseline and a first controller are complete. The headroom trade-off, a discrete driver display and driver lag are in progress.
+**Status:** the uncontrolled baseline, the controller, the headroom test and the stability analysis are complete. Driver lag and a discrete driver display are in progress.
 
 This project was also a way to extend my control background. What I learned along the way, and which results I derived myself, is in [docs/learning_log.md](docs/learning_log.md).
 
@@ -39,11 +39,11 @@ The two speeds are *effective* speeds: they bundle traffic signals, congestion a
 
 | Checkpoint | Timetable | Simulated, no noise | Simulated, baseline noise |
 |---|---|---|---|
-| Stop 20 (9.0 km) | 32 min | 31.4 | – |
-| Stop 21, Blk 223 (18.1 km) | 45 | 44.6 | – |
-| Stop 29 (21.5 km) | 57 | 56.8 | 58.3 |
+| Stop 20 (9.0 km) | 32 min | 31.4 | 32.3 |
+| Stop 21, Blk 223 (18.1 km) | 45 | 44.6 | 45.5 |
+| Stop 29 (21.5 km) | 57 | 56.8 | 58.2 |
 
-The last 0.8 km to the interchange takes 5–7 min in the timetable, against about 2.5 min in the simulation. This looks like terminal approach or recovery time rather than driving, and comes after the last boarding stop, so it was not fitted. Noisy legs are slower on average than noise-free ones, because slow legs cost more time than fast legs save. At baseline noise, the time to stop 29 therefore comes out 1.3 min above the timetable.
+The last 0.8 km to the interchange takes 5–7 min in the timetable, against about 2.5 min in the simulation. This looks like terminal approach or recovery time rather than driving, and comes after the last boarding stop, so it was not fitted. Noisy legs are slower on average than noise-free ones, because slow legs cost more time than fast legs save. At baseline noise, the time to stop 29 therefore comes out 1.2 min above the timetable.
 
 ## Metrics
 
@@ -61,7 +61,7 @@ All results are means over independent runs with 95% confidence intervals (1.96 
 
 ## Results: no control
 
-![Noise sweep](traffic_noise_sweep.png)
+![Noise sweep](figures/traffic_noise_sweep.png)
 
 The figure uses 100 runs per level. The table below uses 200 runs per level:
 
@@ -83,7 +83,7 @@ Two mechanisms drive bunching here. Each can be switched off separately:
 - **Traffic noise:** random leg speeds.
 - **Boarding feedback:** a late bus finds more passengers waiting, dwells longer and falls further behind. Switching it off gives every bus the model's average dwell (29.3 s), whatever its headway.
 
-![EWT along the route](feedback_profile.png)
+![EWT along the route](figures/feedback_profile.png)
 
 200 runs each, baseline traffic noise where on:
 
@@ -114,9 +114,9 @@ Here e_front and e_rear are the front and rear headway errors (nominal headway �
 - **No limits:** any r. This checks the theory, not a realistic design.
 - **Slow-only:** r is capped at 1, so a bus is never asked to go faster than traffic allows, with a floor of 0.5.
 
-**Stability.** Two limits bound the gain. The 10 s refresh delays the feedback, which would cause oscillation for T_c below about 25 s. More interesting is a lower limit on the gain. This version leaves out the paper's term that cancels the boarding feedback, so the spring has to beat that instability on its own. Diagonalising the linearised chain gives every mode a growth rate proportional to (q·b·v̄ − 2α), where q is the passenger arrival rate per km, b the boarding time and v̄ the cruise speed. The spring therefore wins only if α > q·b·v̄ / 2, which here means T_c below about 74 min. Over a single trip of about an hour the transition is gradual: just past the limit, errors grow far more slowly than without control. In the sweep below, performance worsens smoothly as T_c approaches it.
+**Stability.** The analysis below predicts a window for the gain. With T_c above about 81 min, the spring is too weak to beat the boarding feedback. With T_c of only tens of seconds, the 10 s display refresh makes each correction overshoot. Over a single trip of about an hour, crossing the 81 min limit is gradual: just past it, errors grow far more slowly than without control. In the sweep below, performance worsens smoothly as T_c approaches it.
 
-![Gain sweep](tc_sweep.png)
+![Gain sweep](figures/tc_sweep.png)
 
 200 runs each, baseline traffic noise:
 
@@ -132,11 +132,86 @@ Here e_front and e_rear are the front and rear headway errors (nominal headway �
 - **A weak gain is not enough when buses can only slow down.** At T_c = 60 min, slow-only control only halves bunching. A bus that falls behind cannot catch up, so half the spring is missing.
 - **Too strong a gain is expensive.** At T_c = 30 s, buses spend much of their time at the speed floor, and trips take about 8 minutes longer.
 
+### Headroom: not needed at a strong gain
+
+Daganzo and Pilachowski run every bus slightly below cruise speed, by a headroom δ, so that a bus that falls behind still has room to speed up when commands are capped. I tested this on the slow-only controller at T_c = 10 min.
+
+![Headroom sweep](figures/delta_sweep.png)
+
+200 runs each, baseline traffic noise:
+
+| Headroom δ | % bunched | EWT stop 20 | EWT stop 29 | Trip time |
+|---|---|---|---|---|
+| 0 | 0.4 ± 0.3 | 10 ± 1 s | 9 ± 1 s | 63.0 min |
+| 0.02 | 0.2 ± 0.2 | 9 ± 1 s | 8 ± 1 s | 63.5 min |
+| 0.04 | 0.0 | 7 ± 1 s | 7 ± 1 s | 64.0 min |
+| 0.06 | 0.0 | 7 ± 1 s | 6 ± 0 s | 64.5 min |
+| 0.08 | 0.0 | 6 ± 0 s | 5 ± 0 s | 65.3 min |
+| 0.10 | 0.0 | 5 ± 0 s | 5 ± 0 s | 66.3 min |
+
+- **Headroom costs trip time almost in proportion.** Each 0.01 of δ adds about 0.3 min, because every bus runs slower all the time.
+- **It buys very little.** EWT at the last boarding stop falls from 9 s to about 5 s, a difference no passenger would notice. The no-limits controller at the same gain (3 s) is the ceiling on what headroom could ever recover.
+- **A strong gain does headroom's job.** Headroom lets late buses speed up. A strong enough gain gets the same correction the other way: the buses ahead slow down to wait for them. With a weak gain, headroom mattered more: in early runs at T_c = 60 min, δ = 0.05 roughly halved bunching. (Those runs predate a fix to the control timing, so treat them as indicative only.)
+
+So the controller used here is slow-only with no headroom: δ = 0, T_c = 10 min.
+
 **In progress:**
 
-- the headroom trade-off: trip time against EWT as δ varies;
 - a discrete driver display: the target shown as a few speed levels, refreshed every few seconds;
 - driver response lag.
+
+## Stability analysis
+
+This section analyses the no-limits controller as a linear system. The slow-only cap is a saturation, which this analysis does not cover; those results come from the simulation.
+
+**The platoon as a MIMO system.** Let lₙ be bus n's lateness against its nominal schedule, in seconds. Two things change it:
+
+- **Boarding.** A front gap e seconds longer than H brings b·q·e extra seconds of dwell at each stop. Spread over the time between stops, this makes lateness grow at β·eₙ, with β = b·q/T_s ≈ 1.49 per hour (b = 1.52 s per passenger, q = 1/30 passengers per second, T_s = 122 s).
+- **Control.** The speed fraction r = 1 + α(e_front − e_rear) changes lateness at rate 1 − r.
+
+Stacking all N buses gives
+
+  dl/dt = βB·l + u + w,  u = −αL·l
+
+where w is the disturbance (traffic and boarding noise). B holds each bus's front headway error, so it is one-sided. L is the spring's graph Laplacian. A missing neighbour at either end is a ghost at the ideal headway.
+
+![Block diagram](figures/block_diagram.png)
+
+**Reducing it to single loops.** L is symmetric. Its eigenvectors are cosine waves along the platoon, with eigenvalues λₖ = 2 − 2cos(kπ/N), all between 0 and 4. B is not symmetric, but it splits exactly as B = ½L + C + D:
+
+- **½L:** half of B is the Laplacian itself.
+- **C:** a skew-symmetric part. It moves patterns of lateness along the platoon (travelling waves) and cannot make them grow.
+- **D:** two end terms.
+
+Keeping only the ½L part, the eigenvectors of L decouple the system into one loop per mode, each with plant 1/(s − βλₖ/2) and controller gain αλₖ. For N = 12, the resulting closed-loop poles are within 0.5% of the exact eigenvalues of βB − αL.
+
+**Lower limit on the gain.** Each mode has one unstable open-loop pole, at p = βλₖ/2, which is the boarding feedback. The closed-loop pole is (β/2 − α)λₖ, so every mode is stable if and only if α > β/2, which is T_c below about 81 min. The ratio of controller gain to plant pole is 2α/β for every mode, so all modes reach this limit together. Applying Gershgorin's theorem to the full matrix βB − αL, with no approximation, gives a weaker but guaranteed condition: α ≥ β, or T_c ≤ 40 min. The chosen T_c = 10 min (α = 6 per hour) satisfies both by a wide margin.
+
+**Upper limit on the gain.** The display holds each command for T = 10 s. Over one hold, a mode's error changes by a factor (1 − KT), where K is the mode's closed-loop decay rate. If KT exceeds 1, the correction overshoots and the error flips sign at each update; if KT exceeds 2, it also grows. The fastest mode has K ≈ 4α, so the limit is T_c > 2T = 20 s.
+
+**Driver lag and the Nyquist plot.** For the fastest mode, with the refresh approximated as a delay of T/2 and a first-order driver lag τ, the open loop is
+
+  L(s) = αλ e^{−sT/2} / ((τs + 1)(s − βλ/2))
+
+With one unstable open-loop pole, the Nyquist plot must encircle −1 once anticlockwise; it does so in every case below. At T_c = 10 min:
+
+| Driver lag τ | Crossover (rad/s) | Phase margin |
+|---|---|---|
+| 0 | 6.5 × 10⁻³ | 81° |
+| 30 s | 6.4 × 10⁻³ | 70° |
+| 300 s | 4.1 × 10⁻³ | 27° |
+
+A lag of tens of seconds costs about 10° of phase; only a lag of several minutes would threaten stability. Ignoring the refresh, the Routh–Hurwitz condition on τs² + (1 − τp)s + (K − p) requires τ < 1/p ≈ 20 min.
+
+![Nyquist plot](figures/nyquist.png)
+
+**What the analysis leaves out.**
+
+- **The slow-only cap and saturation.** These are covered by simulation only.
+- **The travelling-wave and end terms.** Because B is one-sided, the system is non-normal: a disturbance can grow briefly as it passes down the platoon, even when every mode is stable.
+- **How large errors get.** That depends on the disturbances, which the simulation measures as EWT and % bunched.
+
+The method of diagonalising a bidirectional platoon and checking each mode follows Lestas and Vinnicombe (2007); the sampled stability condition matches Daganzo and Pilachowski's αΔt < 0.5.
 
 ## Assumptions and limitations
 
@@ -146,7 +221,8 @@ Here e_front and e_rear are the front and rear headway errors (nominal headway �
 - Buses can overtake freely.
 - Speeds are lumped effective values, calibrated to off-peak (after 23:30) scheduled times. Peak trips are probably slower.
 - H = 5 min is the midpoint of a published 3–7 min range. The real headway varies through the evening.
-- The controller estimates headways from nominal speeds and average dwells, not from each bus's actual history.
+- The controller estimates headways from nominal speeds and average dwells, not from each bus's actual history. Measured against true headways (the time since the bus ahead passed the same point) over 20 runs with slow-only control at T_c = 10 min, the estimate is about 20 s short on average, with a scatter (sd) of about 25 s, against about 60 s of real headway variation. The offset comes from buses running slower than nominal (noisy legs average slower, and control slows them further). It largely cancels, because the law uses the difference between the front and rear errors. The scatter is a genuine measurement error: the controller acts on a noisy view of the headways. Trajectory-based headways would remove it.
+- A bus that leaves a stop early is credited with the time it gained only at departure, as a step of a few seconds in its estimated headway; a bus that overstays loses ground continuously. The step is small compared with the controller's response time.
 - No acceleration limit is applied. The modelled speeds are effective averages, and the controller changes them by a fraction of a percent per update, far below what a bus can manage.
 
 ## How to run
@@ -154,21 +230,26 @@ Here e_front and e_rear are the front and rear headway errors (nominal headway �
 ```bash
 python -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
-python busBunch.py                 # no control (about 3 min): traffic_noise_sweep.png, feedback_profile.png
-python tc_sweep.py                 # controller gain sweep (about 4 min): tc_sweep.png
-python delta_sweep.py              # headroom sweep (about 6 min): delta_sweep.png, delta_tradeoff.png
-python busBunchVisualisation.py    # one run, animated
+pip install -e .                   # makes the model package importable, so scripts run from any folder
+# run from the repo root (or use your editor's run button on the file)
+python -m experiments.busBunch              # no control (about 3 min): traffic_noise_sweep.png, feedback_profile.png
+python -m experiments.tc_sweep              # controller gain sweep (about 4 min): tc_sweep.png
+python -m experiments.delta_sweep           # headroom sweep (about 6 min): delta_sweep.png, delta_tradeoff.png
+python -m experiments.controlAnalysis       # linear analysis (seconds): block_diagram.png, nyquist.png
+python -m experiments.lag_check             # driver-lag check (about 4 min): prints a table
+python -m experiments.busBunchVisualisation  # one run, animated
 ```
 
 The route is already cached. To refresh it from LTA DataMall, set your API key and run `routePull.py`:
 
 ```bash
 export LTA_ACCOUNT_KEY="your-key"
-python routePull.py
+python -m scripts.routePull
 ```
 
 ## References
 
 - Daganzo, C. F. and Pilachowski, J. (2011). Reducing bunching with bus-to-bus cooperation. *Transportation Research Part B*, 45(1), 267–277.
+- Lestas, I. and Vinnicombe, G. (2007). Scalability in heterogeneous vehicle platoons. *Proceedings of the American Control Conference*, 4678–4683.
 - LTA DataMall: BusRoutes and BusServices APIs.
 - Singapore bus stop study, ScienceDirect article S1077291X22000753 (boarding and stop-delay parameters).

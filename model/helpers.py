@@ -4,7 +4,7 @@ import numpy as np
 from scipy.stats import truncnorm
 
 # Cached LTA DataMall route for bus 190, direction 2; refresh with `python routePull.py`
-with open(Path(__file__).parent / "data" / "route_190_dir2.json") as f:
+with open(Path(__file__).resolve().parents[1] / "data" / "route_190_dir2.json") as f:
     route = json.load(f)
 
 distance = [stop['Distance'] for stop in route]
@@ -47,6 +47,8 @@ class Bus:
         self.dwell_end = -1
         self.terminal = False
         self.arrival_times = []
+        self.r_cmd = 1.0   # speed fraction shown on the driver's display (held between refreshes)
+        self.r = 1.0       # speed fraction the driver is actually applying (lags r_cmd)
     def move(self):
         if self.terminal == False:
             self.position += self.speed
