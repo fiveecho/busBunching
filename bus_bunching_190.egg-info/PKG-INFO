@@ -1,5 +1,0 @@
-Metadata-Version: 2.4
-Name: bus-bunching-190
-Version: 0.1.0
-Summary: Bus bunching on SMRT 190: simulation and cooperative speed control
-Requires-Python: >=3.10
