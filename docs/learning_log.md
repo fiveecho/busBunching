@@ -18,11 +18,11 @@ A first-order lag 1/(τs + 1) approaches its target gradually, never overshoots,
 ### Stabilising an open-loop-unstable plant needs a minimum gain as well as a maximum
 *Worked out through discussion, building on Daganzo and Pilachowski (2011).*
 
-Per mode, the plant is 1/(s − β_θ), with a right-half-plane pole set by the boarding rate β. The controller has to supply enough negative feedback to beat it: α > β/2, which is T_c below about 81 min. The update delay caps the gain from above. So the controller has a stability window, not just an upper limit.
+Per mode, the plant is 1/(s − β_θ), with a right-half-plane pole set by the boarding rate β. The controller has to supply enough negative feedback to beat it: α > β/2, which is T_c below about 81 min. The 10s update interval caps the gain from above. So the controller has a stability window, not just an upper limit.
 
 In Nyquist terms, with one open-loop RHP pole, the plot must encircle −1 once anticlockwise; avoiding it is not enough. Leaving out Daganzo and Pilachowski's cancellation term is what made this lower edge appear. With that term, their law is stable for any positive gain.
 
-The upper edge, at 2T < T_c (about 20 s at a 10 s display refresh), is the same as their condition αΔt < 0.5: the sampled pole is z = 1 − KT. I reproduced it for my setup and then checked it against their eigenvalues (eq. 25).
+The upper edge comes from a discrete-time analysis of the 10 s display refresh: each refresh multiplies a mode's error by z ≈ 1 − (K − p)T, and stability needs z > −1, so T_c > 2T ≈ 20 s. It agrees with Daganzo and Pilachowski's condition αΔt < 0.5.
 
 ### Diagonalising a platoon: the graph Laplacian
 *Worked through myself, following Lestas and Vinnicombe (2007, section III), with help from Claude.*
@@ -34,11 +34,13 @@ For the spring law on an open chain with "ghost" end buses, I:
 3. showed its characteristic roots lie on the unit circle, because their product is 1;
 4. treated the ghost buses as mirror boundary conditions (y₀ = y₁ and y_{N+1} = y_N).
 
-That gives λ_k = 2 − 2cos(kπ/N), with mode shapes cos((n − ½)kπ/N). I also checked the repeated-root cases: λ = 0 is the "all buses equally late" mode, λ = 4 is just outside the range of n for which buses are indexed.
+That gives λ_k = 2 − 2cos(kπ/N), with mode shapes cos((n − ½)kπ/N). I also checked the repeated-root cases: λ = 0 is the "all buses equally late" mode, λ = 4 is just outside the range of k for which modes are indexed.
 
 - **Lesson:** a shift-invariant system is diagonalised by waves (e^{inθ}), in the same way an LTI system is diagonalised by e^{st}. Boundaries decide which waves fit.
 
 ### Routh-Hurwitz
+
+### Continuous and discrete analysis
 
 
 ### Saturation: slow-only control and headroom
@@ -54,7 +56,7 @@ Just past the 81 min edge, errors grow, but slowly: at T_c = 90 min the fastest 
 
 ## Stochastic modelling and statistics
 
-- **Zero-mean noise is not neutral for a quadratic metric.** E[(h + Δ)²] = h² + Var(Δ). Overtaking (re-sorting arrivals) removes some of that increase. This explained why excess wait time stayed flat across the expressway: independent noise split up bunched pairs.
+- **Zero-mean noise is not neutral for a quadratic metric.** E[(h + Δ)²] = h² + Var(Δ). Overtaking (re-sorting arrivals) removes some of that increase, explaining why excess wait time stayed flat across the expressway for previous experiments with a higher expressway speed sd.
 - **Modelling assumptions shape results.** That un-bunching only happens because each bus draws its own expressway speed. Real buses close together share traffic. This led me to reconsider what the noise standard deviation means: differences between buses, not day-to-day variation.
 - **Truncating a distribution can change its mean and its spread.** Bounds of [15, 45] km/h raised the mean as noise grew. Bounds at ±1σ cut the actual sd to 0.54σ. Symmetric ±3σ bounds fixed both.
 - **Independent samples.** Buses within one run share a history, so confidence intervals must use one value per run. Pooling every trip would have made them about 5× too narrow.

@@ -159,6 +159,25 @@ if __name__ == "__main__":
     print("GM low: gain can fall by this factor before the boarding edge. GM high: can rise by this factor;\n"
           "with tau = 0 its w180 is near the sampling limit pi/T, where e^{-sT/2} is a poor model of the refresh.")
 
+    # 3. guaranteed bound without diagonalising: Gershgorin discs of the full matrix beta B - alpha L
+    M = BETA * B - ALPHA * L
+    right_edges = np.diag(M) + np.abs(M).sum(axis=1) - np.abs(np.diag(M))
+    print(f"\nGershgorin: all discs in Re <= 0 if alpha >= beta, i.e. T_c <= {1 / BETA / 60:.0f} min; "
+          f"at T_c = {T_C / 60:.0f} min the largest right edge is {right_edges.max():.1e} (<= 0 means guaranteed)")
+
+    # 4. sampled model of the display refresh: the command is held for T, so each refresh multiplies
+    #    the mode's error by z; stable iff -1 < z < 1. z < 1 is exactly K > p (the lower limit).
+    Kf, pf, T = K[k], p[k], T_REFRESH
+    z = np.exp(pf * T) - Kf / pf * (np.exp(pf * T) - 1)
+    z_cont = np.exp(-(Kf - pf) * T)                       # the continuous pole s = -(K - p), sampled every T
+    K_max = pf * (np.exp(pf * T) + 1) / (np.exp(pf * T) - 1)   # z = -1
+    print(f"sampled pole (fastest mode): z = {z:.4f}, continuous equivalent {z_cont:.4f} "
+          f"(differ by {abs(z - z_cont) / z_cont:.1%}); (K - p)T = {(Kf - pf) * T:.3f} per refresh")
+    print(f"time scales: instability 1/p = {1 / pf / 60:.0f} min, correction 1/(K - p) = {1 / (Kf - pf) / 60:.1f} min, "
+          f"refresh {T} s")
+    print(f"upper limit (z = -1): K < {K_max:.3f} /s, i.e. T_c > {lam[k] / K_max:.1f} s "
+          f"(about 2T); sampled gain margin {K_max / Kf:.1f}")
+
     # Nyquist plot: one open-loop RHP pole, so stability needs one anticlockwise encirclement of -1
     fig, axs = plt.subplots(1, 2, figsize=(12, 5.5))
     w = np.logspace(-6, 1, 20000)

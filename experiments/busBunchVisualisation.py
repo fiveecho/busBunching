@@ -2,10 +2,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from model import FIGURES
-from model.helpers import distance, headway_stats
-from model.controlFunction import make_controller
+from model.helpers import distance
 from model.sim import simulate_run
 
+# one uncontrolled run; pass controller=make_controller(...) from model.controlFunction to animate a controlled one
 result = simulate_run(record=True, controller=None)
 snapshots = result["snapshots"]
 bunched_buses = result["bunched"]
@@ -13,8 +13,7 @@ bunched_buses = result["bunched"]
 print(f'route time of bus 0: {result["trip_times"].get(0)} s')
 print(f'percentage of buses bunched: {round((len(bunched_buses)/result["n_buses"])*100, 3)}')
 
-    # Animation
-
+# Animation
 fig, ax = plt.subplots(figsize=(12, 4))
 ax.set_xlabel("Distance along route (km)")
 ax.set_yticks([])  
@@ -85,6 +84,7 @@ ani = FuncAnimation(
     repeat=False
 )
 
+# uncomment to save the animation (this is how figures/bus_bunch_no_control.gif was made)
 # ani.save(filename=FIGURES / 'bus_bunch_no_control.gif', writer="pillow", fps=15)
 
 plt.show()

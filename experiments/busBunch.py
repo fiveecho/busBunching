@@ -7,8 +7,8 @@ from model.helpers import BEFORE_EXPRESSWAY_INDEX
 RUN_COUNT = 100
 PROFILE_RUNS = 200
 
-# boarding feedback: on = model (dwell grows with time since the last bus, Poisson boarding);
-# off = every bus dwells for the model's mean, so headway no longer affects dwell
+# noise sweep with the full model (boarding feedback on: dwell grows with time since the last bus);
+# passenger_noise=False would give every bus the mean dwell instead (used in the 2 x 2 below)
 FEEDBACK = {"boarding feedback on (model)": True}
 
 if __name__ == "__main__":

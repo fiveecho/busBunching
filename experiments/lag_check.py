@@ -5,7 +5,7 @@ RUN_COUNT = 200
 
 # first-order driver lag (s) between the displayed command and the applied speed fraction.
 # Predictions from controlAnalysis.py (fastest mode, T_c = 10 min): phase margin 81 / 70 / 27 deg
-# at 0 / 30 / 300 s, and the Routh-Hurwitz limit tau < 1/p, about 20 min, is reached at 1200 s.
+# at 0 / 30 / 300 s, and the stability limit tau < 1/p, about 20 min, is reached at 1200 s.
 LAGS = [0, 30, 300, 1200]
 
 CONTROLLERS = {

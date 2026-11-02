@@ -11,7 +11,7 @@ RUN_COUNT = 200
 DELTA = [0.0, 0.02, 0.04, 0.06, 0.08, 0.10]
 
 # slow-only controller at the gain chosen from the T_c sweep (T_c = 10 min: near-zero bunching
-# for about +2.5 min of trip time); add entries here to compare other gains
+# for about +2.3 min of trip time); add entries here to compare other gains
 GAINS = {"T_c = 10 min": 600}
 SLOW_ONLY = dict(r_max=1.0, r_min=0.5)
 

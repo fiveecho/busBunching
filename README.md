@@ -14,9 +14,11 @@ Without control, bunching appears even with no traffic noise at all. Uneven pass
 
 A slow-only version of Daganzo and Pilachowski's cooperative speed control, which never asks a bus to go faster than traffic allows, cuts bunching from 64% to under 1% and EWT at the last boarding stop from 129 s to 9 s. It costs about 2.3 minutes of trip time. Adding the paper's speed headroom on top buys almost nothing more at this gain.
 
+A linear stability analysis predicts the usable range of the controller gain (T_c between 20 s and 81 min) and shows that driver reaction lags of up to a few minutes are harmless, which the simulation confirms.
+
 ## Model
 
-The model is tick-based, with 1-second ticks. Buses are dispatched every 5 minutes, aligning with weekday peak hour headways, over the span of two simulated hours. Each run continues until every bus has reached the terminal.
+The model is tick-based, with 1-second ticks. Buses are dispatched every 5 minutes, the midpoint of the published peak frequency, over the span of two simulated hours. Each run continues until every bus has reached the terminal.
 
 - **Route:** 31 stops over 22.3 km, from the LTA DataMall BusRoutes API (direction 2). The data is cached in `data/route_190_dir2.json`. It includes a 9.1 km non-stop expressway leg between stop 20 (Raffles Town Club) and stop 21 (Blk 223).
 - **Speed:** each bus draws one speed per leg, when it leaves a stop. The draw is a normal distribution truncated at the mean ± 3 sd, so the truncation does not shift the mean (with a floor of 5 km/h arterial and 3 km/h expressway). A *traffic factor* scales both standard deviations. Factor 1.0 is the baseline: 5 km/h on arterial roads, about 13 s of travel-time sd on a typical 0.45 km leg, and 1 km/h on the expressway. Because each bus draws its own speed, the sd represents how differently buses fare on the same leg. On arterial roads that difference is large (one bus catches a red light, the next a green). On a free-flowing expressway, buses a few minutes apart share conditions, so it is small.
@@ -35,7 +37,7 @@ The model is tick-based, with 1-second ticks. Buses are dispatched every 5 minut
 
 ### Calibration
 
-The two speeds are *effective* speeds: they bundle traffic signals, congestion and merging into one number. They were fitted, with traffic noise off, to the scheduled 190 times for departures as per last bus timings.
+The two speeds are *effective* speeds: they bundle traffic signals, congestion and merging into one number. They were fitted, with traffic noise off, to the scheduled times of the last buses of the day (departing after 23:30).
 
 | Checkpoint | Timetable | Simulated, no noise | Simulated, baseline noise |
 |---|---|---|---|
@@ -57,7 +59,7 @@ The last 0.8 km to the interchange takes 5–7 min in the timetable, against abo
   EWT grows along the route, so an average over all stops would hide where the problem is. It is reported at two stops: **stop 20**, the last stop before the expressway, and **stop 29**, the last boarding stop. The terminal is not used: it is alight-only, so its headways match no passenger's wait.
 - **Trip time:** dispatch to terminal, averaged within each run. When control is added, this becomes the cost of control.
 
-All results are means over independent runs with 95% confidence intervals (1.96 × sd / √runs). Each run counts as one sample, since buses within a run are not independent.
+All results are means over independent runs with 95% confidence intervals (1.96 × sd / √runs). Each run counts as one sample, since buses within a run are not independent. Each table is a separate batch of runs, so a configuration that appears in more than one table differs slightly between them, within the confidence intervals.
 
 ## Results: no control
 
@@ -74,7 +76,7 @@ The figure uses 100 runs per level. The table below uses 200 runs per level:
 
 - **Bunching is not only a traffic problem.** With traffic noise switched off, the boarding feedback alone still bunches about 10% of buses. This is the instability that the first term of Daganzo and Pilachowski's control law is designed to cancel.
 - **Headway errors amplify along the route.** At baseline, EWT grows from about 24 s at stop 10 to 77 s at stop 20 and about 2 min at stop 29. Passengers late on the route bear most of the cost.
-- **The baseline sits on the steep part of the curve,** so the controller will be tested at several noise levels rather than at the baseline alone.
+- **The baseline sits on the steep part of the curve,** so results are sensitive to the assumed noise level. The controller results below are at the baseline only.
 
 ### Why buses bunch: a disturbance and an amplifier
 
@@ -131,6 +133,7 @@ Here e_front and e_rear are the front and rear headway errors (nominal headway �
 - **Slow-only control works with a strong enough gain.** At T_c = 10 min it removes nearly all bunching. It costs about 2.3 min of trip time, because buses can only ever be slowed.
 - **A weak gain is not enough when buses can only slow down.** At T_c = 60 min, slow-only control only halves bunching. A bus that falls behind cannot catch up, so half the spring is missing.
 - **Too strong a gain is expensive.** At T_c = 30 s, buses spend much of their time at the speed floor, and trips take about 8 minutes longer.
+- **The left end of the figure is the sampled-update limit.** Below about 30 s, the no-limits controller starts to oscillate (see Stability analysis). Buses cannot reverse, so the oscillation raises their average speed: trip times fall, and EWT dips slightly below zero, because EWT assumes the mean headway is H.
 
 ### Headroom: not needed at a strong gain
 
@@ -193,7 +196,7 @@ The mode is stable if −1 < z < 1:
 - **z < 1** reduces exactly to K > p: the lower limit above, recovered from the sampled model.
 - **z > −1** requires (K − p)T < 2, approximately. If a correction over one refresh is larger than the error itself, it overshoots, so the error changes sign at every update. If it is more than twice the error, each overshoot is bigger than the last.
 
-The fastest mode has K ≈ 4α, so the upper limit is T_c > 2T = 20 s. When (K − p)T is small, z ≈ e^{−(K−p)T}, which is the continuous pole s = −(K − p). This is why the continuous analysis holds at the chosen gain: there (K − p)T ≈ 0.06, and the two models agree to 0.1%.
+The fastest mode has K ≈ 4α, so the upper limit is T_c > 2T = 20 s. When (K − p)T is small, z ≈ e^{−(K−p)T}, which is the continuous pole s = −(K − p). This is why the continuous analysis holds at the chosen gain: there (K − p)T ≈ 0.06, and the two models agree to 0.2%.
 
 **Driver lag and the Nyquist plot.** For the fastest mode, with the refresh approximated as a delay of T/2 and a first-order driver lag τ, the open loop is
 
@@ -234,6 +237,7 @@ The method of diagonalising a bidirectional platoon and checking each mode follo
 - **A discrete driver display.** Daganzo and Pilachowski suggest showing drivers an approximate speed limit on a screen. Rounding the command to a few levels would test whether drivers could realistically follow this controller.
 - **Trajectory-based headways.** Measuring headways from when the bus ahead actually passed, instead of from nominal speeds, would remove the estimation error noted below.
 - **Holding at stops** as an alternative to slowing buses on the road, and a realistic demand profile with bus capacity.
+- **Other noise levels.** The controller was only tested at the baseline traffic noise.
 
 ## Assumptions and limitations
 

@@ -7,12 +7,12 @@ from model.controlFunction import make_controller
 RUN_COUNT = 100
 
 # T_c (s): gain alpha = 1/T_c. Predicted stable window at a 10 s control period:
-# about 25 s (delay limit) to about 81 min (boarding-instability limit, T_c < 2/beta); see controlAnalysis.py.
+# 2 x control period = 20 s (sampled-update limit) to about 81 min (boarding-instability limit, T_c < 2/beta); see controlAnalysis.py.
 T_C = [15, 20, 30, 120, 600, 1800, 3600, 5400]
 
 STAGES = {
-    "stage 1: no limits": dict(),
-    "stage 2: slow-only, delta 0": dict(delta=0, r_max=1.0, r_min=0.5),
+    "no limits": dict(),
+    "slow-only (r in [0.5, 1], no headroom)": dict(delta=0, r_max=1.0, r_min=0.5),
 }
 
 if __name__ == "__main__":
@@ -30,8 +30,8 @@ if __name__ == "__main__":
             ax.errorbar(np.array(T_C) / 60, [r[key] for r in res], yerr=[r[key + "_ci"] for r in res],
                         marker='o', capsize=3, label=name)
         ax.axhline(baseline[key], color='grey', linestyle='--', label='no control')
-        ax.axvline(81, color='red', linestyle=':', label='predicted instability (about 81 min)')
-        ax.axvline(0.5, color='red', linestyle=':', label='predicted instability (about 25 sec)')
+        ax.axvline(81, color='red', linestyle=':', label='predicted stability limits (20 s and 81 min)')
+        ax.axvline(20 / 60, color='red', linestyle=':')
         ax.set(title=title, ylabel=unit)
     axs[0].legend(fontsize=8)
     axs[3].set(xscale='log', xlabel='T_c (min), gain = 1/T_c')
