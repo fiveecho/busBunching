@@ -62,72 +62,6 @@ def encirclements(K, p, tau, T=T_REFRESH):
     return (phase[-1] - phase[0]) / (2 * np.pi)
 
 
-def draw_block_diagram(filename=FIGURES / 'block_diagram.png'):
-    """Regulator loop: no reference input (the target is zero headway error, so only the disturbance drives it)."""
-    fig, ax = plt.subplots(figsize=(13, 10))
-    ax.set(xlim=(0, 13.2), ylim=(-0.9, 10.9)); ax.axis('off')
-
-    def box(x, y, text, caption=None, w=1.3, h=0.8, below=False):
-        ax.add_patch(plt.Rectangle((x - w / 2, y - h / 2), w, h, fill=False, lw=1.5))
-        ax.text(x, y, text, ha='center', va='center', fontsize=14)
-        if caption:
-            ax.text(x, y - h / 2 - 0.15 if below else y + h / 2 + 0.15, caption, ha='center',
-                    va='top' if below else 'bottom', fontsize=8, color='dimgrey')
-
-    def junction(x, y, signs):
-        ax.add_patch(plt.Circle((x, y), 0.22, fill=False, lw=1.5))
-        offsets = {'left': (-0.32, 0.18), 'top': (-0.18, 0.32), 'bottom': (-0.2, -0.36)}
-        for side, sign in signs.items():
-            ax.text(x + offsets[side][0], y + offsets[side][1], sign, fontsize=12, ha='center', va='center')
-
-    def arrow(*points, label=None, at=0):
-        """Polyline through points, arrowhead on the last segment; optional label above segment `at`."""
-        for (x1, y1), (x2, y2) in zip(points[:-2], points[1:-1]):
-            ax.plot([x1, x2], [y1, y2], color='black', lw=1.2)
-        ax.annotate('', xy=points[-1], xytext=points[-2], arrowprops=dict(arrowstyle='->', lw=1.2))
-        if label:
-            (x1, y1), (x2, y2) = points[at], points[at + 1]
-            ax.text((x1 + x2) / 2, (y1 + y2) / 2 + 0.12, label, ha='center', va='bottom', fontsize=10)
-
-    rows = [
-        (7.8, 'MIMO: all N buses (arrows carry vectors)',
-         [r'$\dfrac{1}{s}\,I$', r'$\beta B$', r'$\alpha L$', r'$e^{-sT/2}\,I$', r'$\dfrac{1}{\tau s+1}\,I$'],
-         (r'$\mathbf{w}$', r'$\mathbf{l}$')),
-        (2.3, r'Mode $k$ after diagonalising with the eigenvectors of $L$ ($B \approx L/2$; travelling-wave and end terms dropped)',
-         [r'$\dfrac{1}{s}$', r'$\beta\lambda_k/2$', r'$\alpha\lambda_k$', r'$e^{-sT/2}$', r'$\dfrac{1}{\tau s+1}$'],
-         (r'$w_k$', r'$x_k$')),
-    ]
-    for y, title, (integ, board, ctrl, hold, lag), (w, out) in rows:
-        ax.text(0.1, y + 2.5, title, fontsize=11, weight='bold')
-        y_in, y_fb = y + 1.3, y - 2.0                      # boarding loop above, control loop below
-        # plant: integrator with boarding as positive feedback (open-loop unstable)
-        ax.add_patch(plt.Rectangle((0.95, y - 0.85), 3.8, 3.05, fill=False, ls='--', lw=1, color='grey'))
-        ax.text(1.02, y - 0.8, 'plant', fontsize=8, color='grey', va='bottom')
-        arrow((0.1, y), (1.28, y))
-        ax.text(0.55, y + 0.12, w, ha='center', va='bottom', fontsize=12)
-        junction(1.5, y, {'left': '+', 'top': '+', 'bottom': '−'})
-        arrow((1.72, y), (2.55, y))
-        box(3.2, y, integ, 'bus motion', h=1.0, below=True)
-        arrow((3.85, y), (12.6, y))
-        ax.text(12.1, y + 0.12, out + '  lateness', ha='center', va='bottom', fontsize=10)
-        arrow((4.4, y), (4.4, y_in), (3.85, y_in))
-        box(3.2, y_in, board, 'boarding feedback')
-        arrow((2.55, y_in), (1.5, y_in), (1.5, y + 0.22))
-        # controller path, drawn right to left
-        arrow((12.0, y), (12.0, y_fb), (10.85, y_fb))
-        box(10.2, y_fb, ctrl, 'controller (spring)')
-        arrow((9.55, y_fb), (8.55, y_fb))
-        box(7.9, y_fb, hold, 'display refresh')
-        arrow((7.25, y_fb), (6.4, y_fb))
-        box(5.6, y_fb, lag, 'driver lag', w=1.6, h=1.0)
-        arrow((4.8, y_fb), (1.5, y_fb), (1.5, y - 0.22), label='speed-up command')
-
-    ax.text(0.1, -0.6, r'Per-mode loop: $L_k(s) = \dfrac{\alpha\lambda_k\, e^{-sT/2}}{(\tau s+1)(s-\beta\lambda_k/2)}$'
-                       r'$\qquad T$ = display refresh, $\tau$ = driver lag, $\beta$ = boarding gain, $\alpha = 1/T_c$, $w$ = disturbance',
-            fontsize=11)
-    fig.savefig(filename, dpi=150, bbox_inches='tight')
-
-
 if __name__ == "__main__":
     L, B = laplacian(N), boarding(N)
     print(f"beta = {BETA * 3600:.2f} /h (T_s = {T_S:.0f} s per boarding stop), alpha = {ALPHA * 3600:.2f} /h")
@@ -198,6 +132,4 @@ if __name__ == "__main__":
     axs[0].legend(fontsize=8)
     fig.tight_layout()
     fig.savefig(FIGURES / 'nyquist.png', dpi=150)
-
-    draw_block_diagram()
     plt.show()

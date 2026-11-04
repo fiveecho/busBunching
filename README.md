@@ -243,7 +243,7 @@ The method of diagonalising a bidirectional platoon and checking each mode follo
 
 - Traffic noise is independent across buses and legs. Real congestion is shared, so the baseline is probably pessimistic.
 - Demand is uniform across stops. Bus capacity and alighting are not modelled, so a full bus keeps gaining boarding delay. This probably makes bunching worse than reality.
-- Dispatch is perfectly even, which is optimistic.
+- Dispatch is perfectly even.
 - Buses can overtake freely.
 - Speeds are lumped effective values, calibrated to off-peak (after 23:30) scheduled times. Peak trips are probably slower.
 - H = 5 min is the midpoint of a published 3–7 min range. The real headway varies through the evening.
